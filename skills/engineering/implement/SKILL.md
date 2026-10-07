@@ -13,7 +13,6 @@ Resolve referenced skills through the current harness's available-skills catalog
 
 1. Implement the requested behavior. Use the `tdd` skill where possible, at pre-agreed seams.
 2. Run the repository's typecheck and affected test files regularly during implementation. Run the full test suite once implementation is complete. Report unavailable checks or existing failures accurately.
-3. Use the `code-review` skill to review the completed changes against the specification and repository standards. Address findings and rerun checks affected by any fixes.
-4. Commit the task's changes and push to the current branch, unless the user's instructions or repository rules specify another delivery path. Use the `pr` skill to prepare and open the pull request.
+3. Commit the task's changes and push to the current branch, unless the user's instructions or repository rules specify another delivery path. Use the `pr` skill to prepare and open the pull request.
 
 Report the implemented behavior, validation results, and pull request URL, including any unresolved findings or skipped checks.

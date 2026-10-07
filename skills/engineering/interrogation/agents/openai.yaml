@@ -1,0 +1,13 @@
+interface:
+  display_name: "Interrogation"
+  short_description: "Challenge code with independent T3 model reviewers"
+  default_prompt: "Use $interrogation to review these changes with independent T3 reviewers and return a synthesized verdict without applying fixes."
+
+policy:
+  allow_implicit_invocation: false
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "t3-code"
+      description: "T3 live provider catalog and delegated review tasks"
