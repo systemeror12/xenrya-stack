@@ -1,0 +1,13 @@
+interface:
+  display_name: "Swarm Tickets"
+  short_description: "Implement claimed tickets with T3 subagents"
+  default_prompt: "Use $swarm-tickets to claim the requested number of tickets from the supplied source and invoke $implement in one T3 subagent per claimed ticket."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "t3-code"
+      description: "T3 Code orchestration for ticket workers"
+
+policy:
+  allow_implicit_invocation: false
