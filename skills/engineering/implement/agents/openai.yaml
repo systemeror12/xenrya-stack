@@ -1,0 +1,7 @@
+interface:
+  display_name: "Implement"
+  short_description: "Implement specs through testing, review, and delivery"
+  default_prompt: "Use $implement to implement the provided specification or tickets, validate and review the changes, then commit, push, and prepare a pull request."
+
+policy:
+  allow_implicit_invocation: false

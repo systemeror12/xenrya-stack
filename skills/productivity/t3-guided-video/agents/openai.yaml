@@ -1,0 +1,13 @@
+interface:
+  display_name: "Guided T3 Browser Video"
+  short_description: "Record readable walkthroughs with the T3 browser"
+  default_prompt: "Use $t3-guided-video to record a walkthrough in which each important input and state change remains visible."
+
+policy:
+  allow_implicit_invocation: false
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "t3-code"
+      description: "T3 collaborative browser navigation and recording"
