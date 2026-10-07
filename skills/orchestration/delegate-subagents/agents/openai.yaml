@@ -1,0 +1,10 @@
+interface:
+  display_name: "Delegate Subagents"
+  short_description: "Assign scoped work to another harness or subagent"
+  default_prompt: "Use $delegate-subagents to assign this task to another harness or subagent and collect its result."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "t3-code"
+      description: "T3 Code cross-harness task delegation"
