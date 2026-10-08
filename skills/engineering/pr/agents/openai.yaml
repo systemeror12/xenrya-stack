@@ -4,4 +4,4 @@ interface:
   default_prompt: "Use $pr to write the pull request description for this branch, with before and after images and validation results."
 
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true
