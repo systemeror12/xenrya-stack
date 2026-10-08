@@ -1,0 +1,7 @@
+interface:
+  display_name: "Specs"
+  short_description: "Turn an issue into a lean one-page spec"
+  default_prompt: "Use $specs to write a lean spec for this issue from the repository's source-of-truth docs."
+
+policy:
+  allow_implicit_invocation: false
