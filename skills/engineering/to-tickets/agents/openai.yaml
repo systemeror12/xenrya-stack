@@ -4,4 +4,4 @@ interface:
   default_prompt: "Use $to-tickets to break this spec into small tickets that each pass interrogation as one PR."
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

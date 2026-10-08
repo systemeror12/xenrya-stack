@@ -1,6 +1,7 @@
 ---
 name: pr
-description: "Pull request writing. Use when preparing or opening a pull request for a branch."
+description: "Write a PR description backed by the diff, before and after images, and validation that ran."
+disable-model-invocation: true
 ---
 
 # PR

@@ -1,6 +1,7 @@
 ---
 name: specs
-description: "Spec writing. Use when turning an issue or feature request into a spec."
+description: "Turn an issue into a lean one-page spec from the source-of-truth docs."
+disable-model-invocation: true
 ---
 
 # Specs

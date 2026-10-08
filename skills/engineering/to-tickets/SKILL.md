@@ -1,6 +1,7 @@
 ---
 name: to-tickets
-description: "Ticket writing. Use when breaking a spec into tickets."
+description: "Break a spec into small tickets that each pass interrogation as one PR."
+disable-model-invocation: true
 ---
 
 # To Tickets
