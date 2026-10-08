@@ -1,0 +1,7 @@
+interface:
+  display_name: "PR"
+  short_description: "Write a proven pull request description"
+  default_prompt: "Use $pr to write the pull request description for this branch, with before and after images and validation results."
+
+policy:
+  allow_implicit_invocation: true
