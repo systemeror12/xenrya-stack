@@ -134,7 +134,7 @@ Review the combined changes against every ticket's acceptance criteria and do an
 
 1. **Validate.** Run the repository's typecheck and full test suite on the combined changes.
 2. **Commit and push.** Use the branch and PR structure the user asked for. Stage only changes the batch owns.
-3. **Open the PRs.** For each PR the batch opens or updates, invoke `pr` as the harness table shows. If your catalog doesn't have it, read this repo's copy at [`../../engineering/pr/SKILL.md`](../../engineering/pr/SKILL.md). Ask it to publish, and give it the base, the head, the batch's tickets, and the worker models. The file it writes is the PR body. Never open or update a PR with a description you wrote by hand, such as through a bare `gh pr create` or `glab mr create`.
+3. **Open the PRs.** For each PR the batch opens or updates, invoke `pr` as the harness table shows. If your catalog doesn't have it, read this repo's copy at [`../../engineering/pr/SKILL.md`](../../engineering/pr/SKILL.md). Ask it to publish, and give it the base, the head, the batch's tickets, and the worker models. The description it drafts is the PR body. Never open or update a PR with a description you wrote by hand, such as through a bare `gh pr create` or `glab mr create`.
 
 Report checks you couldn't run, and failures that existed before the batch, as they are.
 
