@@ -60,3 +60,4 @@ author anything. Every claim rests on **proof**:
 | **Validation**       | A table of check, command, and result. Then the temporary steps, and what wasn't run.          |
 | **Risk**             | Contract changes, behaviour that existing clients will notice, and coverage that was lost.    |
 | Issue reference      | `Closes #N` when this PR completes the issue; `Refs #N` for partial or uncertain work.        |
+| Model                | The last line: `Model: <display name>`, the display name of the model you run as (such as `Claude Opus 5.5`), not its model ID. When other models wrote the branch's code, such as delegated workers, list every display name, comma-separated. |

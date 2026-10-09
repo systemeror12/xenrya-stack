@@ -47,7 +47,7 @@ Call `orchestrator_capabilities` and resolve the user's requested models, or a r
 
 Without a requested roster, choose two distinct capable models, preferring different providers. Use a smaller roster if availability requires it and report the reduced diversity. State the selected providers/models before dispatch. Report an unavailable requested model instead of silently substituting a family default. Refresh capabilities and correct actionable dispatch errors; retain valid reviewers and identify any unavailable entries.
 
-Read [the reviewer prompt](references/reviewer-prompt.md), [review rubric](references/rubric.md), and [code-quality lens](references/code-quality-review.md). Fill the prompt with the intent, checkout path, frozen review scope, surrounding context, and repository guidance. Insert the full rubric and code-quality lens into their placeholders. Structural improvements are review proposals; reviewers must leave the implementation unchanged.
+Read [the reviewer prompt](references/reviewer-prompt.md), [review rubric](references/rubric.md), and [code-quality lens](references/code-quality-review.md). Fill the prompt with the intent, checkout path, frozen review scope, surrounding context, repository guidance, and the domain glossary: `GLOSSARY.md`, or the glossaries `GLOSSARY-MAP.md` lists for the touched contexts. Insert the full rubric and code-quality lens into their placeholders. Structural improvements are review proposals; reviewers must leave the implementation unchanged.
 
 Reviewers receive only their supplied task prompt, so include the needed context or absolute paths to accessible snapshot artifacts. Keep each initial review independent of the other reviewers' findings and send the same filled prompt to every selected model.
 

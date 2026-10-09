@@ -1,8 +1,6 @@
 ---
 name: t3-guided-video
 description: "Record readable T3 browser walkthroughs with guided scrolling, highlighting, pacing, packaging, and visual verification."
-metadata:
-  opencode/autoinvoke: "false"
 disable-model-invocation: true
 ---
 

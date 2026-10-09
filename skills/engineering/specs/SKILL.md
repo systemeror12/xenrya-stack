@@ -27,6 +27,7 @@ decision.
 3. **Trace.** Check each rule, scope line, and actor against a source.
    - A rule with no source is a gap.
    - Two sources that disagree are a gap.
+   - A term the issue uses differently from `GLOSSARY.md` is a gap.
 
    Move every gap to Decisions. Done when each remaining rule has a source and
    each gap has a Decisions row.
@@ -67,5 +68,6 @@ gets resolved:
   docs. The recommendation reads "none until authority is found".
 - **Triage**: an owner's call, or a fix to make two docs agree. Recommend the
   safer option.
-- **Grilling**: a design trade-off to stress-test with the user through the
-  `grilling` skill. Recommend one option and give a short reason.
+- **Grilling**: fog the docs can't clear, such as a design trade-off, to
+  stress-test with the user through the `grilling` skill. Recommend one
+  option and give a short reason.

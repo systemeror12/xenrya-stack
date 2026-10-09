@@ -12,18 +12,18 @@ You are the **parent**. You pick a batch of tickets, claim them, and hand each c
 
 Workers can run on any harness, model, and effort that T3 offers, so they don't have to match the parent. For example, a Claude Opus 5.5 · High parent can run Opus 5.5 · Medium workers or Codex GPT-6.1-Sol · High workers.
 
-This skill handles the ticket workflow. The `delegate-subagents` skill handles the T3 mechanics: resolving the target, dispatching, reading status, retrying, and cancelling. Follow that skill wherever this one points to it.
+This skill owns the ticket workflow. All T3 Code orchestration (tool names, target resolution, dispatch, status, further rounds, cancelling) lives in `delegate-subagents`, which this skill invokes in preflight and defers to at every phase that points to it.
 
 The workflow has six phases, run in order: **preflight → claim → plan waves → dispatch → accept → deliver**. Each phase ends on a "Done when" line. Finish that phase before starting the next.
 
 ## Harness notes
 
-This skill runs on both Claude Code and Codex, and workers may run on either one. T3 tool naming is covered in `delegate-subagents`.
+This skill runs on both Claude Code and Codex, and workers may run on either one.
 
 | | Claude Code | Codex |
 | --- | --- | --- |
 | Invoke this skill (user only) | `/swarm-tickets` | `$swarm-tickets` |
-| Load `implement` / `delegate-subagents` | Skill tool; the "Base directory" line gives the absolute path | Available-skills catalog entry |
+| Invoke `delegate-subagents` / load `implement` | Skill tool; the "Base directory" line gives the absolute path | Available-skills catalog entry |
 | Track the ledger | The todo/task tool, or the conversation | `update_plan`, or the conversation |
 
 Workers can't count on either harness's skill syntax, so the worker brief points at `implement` by absolute file path.
@@ -39,12 +39,13 @@ A worker is **settled** when its task is terminal and `hasPendingChildRuns` is f
 
 ## 1. Preflight
 
-1. **Ticket source.** Get it from the user's request or the repository instructions. Read the tickets, their acceptance criteria and dependencies, and any project guidance that applies. If you can't find the source, ask the user where it is before you claim anything.
-2. **Count.** Use the ticket IDs and count the user asked for. An explicit list sets the count when the user gives none. For a backlog with no count, ask how many to claim. The count must be a positive integer. If the list and the count conflict, ask the user to resolve it.
-3. **Skills.** Load `implement` and `delegate-subagents` as the harness table shows. If your catalog doesn't have them, use this repo's copies at [`../../engineering/implement/SKILL.md`](../../engineering/implement/SKILL.md) and [`../delegate-subagents/SKILL.md`](../delegate-subagents/SKILL.md). Record `implement`'s absolute path for the worker briefs. If either skill is missing, stop and report it.
-4. **Worker target.** Confirm that `orchestrator_capabilities` reports `appOwnedSubagents`. Then turn the user's wording ("Claude Opus 5.5 Medium with Full Access", "Codex GPT 6.1 High") into a selection by following phase 2 of `delegate-subagents`. All workers use that selection unless the user gives specific tickets their own target. Tell the user the selection line.
+1. **Orchestration.** Invoke `delegate-subagents` as the harness table shows. If your catalog doesn't have it, read this repo's copy at [`../delegate-subagents/SKILL.md`](../delegate-subagents/SKILL.md). Use its phases 2–4 for every worker; the brief in phase 4 here replaces its phase 1. If it is unavailable, stop and report it.
+2. **Ticket source.** Get it from the user's request or the repository instructions. Read the tickets, their acceptance criteria and dependencies, and any project guidance that applies. If you can't find the source, ask the user where it is before you claim anything.
+3. **Count.** Use the ticket IDs and count the user asked for. An explicit list sets the count when the user gives none. For a backlog with no count, ask how many to claim. The count must be a positive integer. If the list and the count conflict, ask the user to resolve it.
+4. **Implement skill.** Load `implement` as the harness table shows. If your catalog doesn't have it, use this repo's copy at [`../../engineering/implement/SKILL.md`](../../engineering/implement/SKILL.md). Record its absolute path for the worker briefs. If it is missing, stop and report it.
+5. **Worker target.** Turn the user's wording ("Claude Opus 5.5 Medium with Full Access", "Codex GPT 6.1 High") into a selection by following phase 2 of `delegate-subagents`. All workers use that selection unless the user gives specific tickets their own target. Tell the user the selection line.
 
-Done when: the source, count, both skill paths, and the worker selection are all resolved, or a blocker has been reported to the user.
+Done when: `delegate-subagents` is loaded, and the source, count, `implement` path, and worker selection are all resolved, or a blocker has been reported to the user.
 
 ## 2. Claim
 
@@ -66,7 +67,7 @@ Done when: every selected ticket has a claim outcome in the ledger.
 
 ## 3. Plan waves
 
-`delegate_task` runs every worker in the parent's checkout and has no `workspaceStrategy`. Concurrent workers therefore share one working tree, and file ownership is what keeps them apart.
+Every worker runs in the parent's checkout (phase 3 of `delegate-subagents`), so concurrent workers share one working tree and file ownership is what keeps them apart.
 
 Assign each ticket the files it owns, including its tests, generated files, and any shared configuration it touches. Changes the user already has in the checkout stay outside every worker's ownership.
 
@@ -76,15 +77,13 @@ Done when: every claimed ticket has its owned files and a wave in the ledger.
 
 ## 4. Dispatch
 
-Dispatch through T3 `delegate_task` as described in phase 3 of `delegate-subagents`. In this skill, every worker goes through `delegate_task`, including workers on your own provider, because the skill asks for T3-owned children. Native subagents and top-level threads (`create_threads`, `t3_thread_launch`) are not part of this workflow.
-
-For each ticket in the current wave, call `delegate_task` with:
+Dispatch each ticket in the current wave as a T3-owned child, following phase 3 of `delegate-subagents`, even when the worker runs on your own provider. Use these ticket-specific values:
 
 - `task`: the brief below, with every field filled in
 - `title`: `<ticket ID>: <ticket title>`
-- `role="implementation"` and `mode="async"`
-- `target`, `runtimeMode`, `interactionMode`: from the ticket's selection; leave out any part the selection marks as inherited
-- `clientRequestId`: `<batchId>-<ticketId>-a<attempt>`, reused unchanged when retrying the same dispatch
+- `role`: `implementation`
+- selection: the ticket's override, or the batch selection
+- `clientRequestId`: `<batchId>-<ticketId>-a<attempt>`
 
 Write the returned `taskId` to the ledger immediately.
 
@@ -116,15 +115,15 @@ Done when: every ticket in the current wave has a `taskId` in the ledger.
 
 ## 5. Accept
 
-**Waiting.** When only worker work remains, report the ticket → `taskId` mapping and end your turn. Read results as described in phase 4 of `delegate-subagents`. A completion notification is one checkpoint. It doesn't mean the batch is done.
+**Waiting.** When only worker work remains, report the ticket → `taskId` mapping and end your turn. Read results with phase 4 of `delegate-subagents`. A completion notification is one checkpoint. It doesn't mean the batch is done.
 
 **Accepting a ticket.** First confirm the worker is settled. A finished worker turn doesn't prove the ticket is implemented. Check every acceptance criterion against the actual changed files and the validation evidence. Then record the ticket as accepted or needing correction.
 
 **Advancing waves.** Start the next wave only after every ticket it depends on is settled and accepted. At that point, release the earlier tickets' file ownership and fill in the new briefs' Dependencies field with the interfaces and findings those tickets actually produced. Each ticket has at most one active worker at a time.
 
-**Correcting or retrying.** First inspect the worker's partial changes and bring the ledger up to date. Then dispatch a new attempt (`-a2`, …) with the same selection. Send the original brief plus the current artifacts, the prior results, and the criteria still unmet. Record the new `taskId` against the same ticket and keep the old one.
+**Correcting or retrying.** First inspect the worker's partial changes and bring the ledger up to date. Then start another round as `delegate-subagents` describes, as attempt `-a2`, … with the same selection, adding the current artifacts and the criteria still unmet. Record the new `taskId` against the same ticket and keep the old one.
 
-**Cancelling.** Use `task_cancel` when the user stops a worker, or when a worker that is still running has to be replaced. Before you replace the worker or release its files, confirm it has stopped and inspect its partial changes. Keep the evidence. When a ticket fails the same way twice, mark it blocked and report it instead of retrying again.
+**Cancelling.** Cancel through `delegate-subagents` when the user stops a worker, or when a worker that is still running has to be replaced. Before you replace the worker or release its files, confirm it has stopped and inspect its partial changes. Keep the evidence. When a ticket fails the same way twice, mark it blocked and report it instead of retrying again.
 
 Done when: every claimed ticket is settled and recorded as accepted, blocked, or cancelled.
 
