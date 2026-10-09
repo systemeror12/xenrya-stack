@@ -39,15 +39,16 @@ author anything. Every claim rests on **proof**:
 
    Done when every Validation row is a command you ran, with its real result,
    and every check you skipped is named.
-5. **Write.** Write `pr-<number-or-branch>.md` in the working directory,
-   matching [`references/example.md`](references/example.md). Done when every
+5. **Write.** Draft the title and body, matching
+   [`references/example.md`](references/example.md). Done when every
    [section](#sections) is filled.
 6. **Publish.** Open or update the PR only when the user or the calling skill
-   asks. If a PR already exists for the branch, update it. Upload the images to
-   the PR. When PR-linking tools are available, link the PR to the thread.
-   Done when the PR body matches the file and every image renders.
-7. **Report.** Give the file path, the title, the validation results, and any
-   skipped checks.
+   asks. If a PR already exists for the branch, update its title and body.
+   Upload the images to the PR. When PR-linking tools are available, link the
+   PR to the thread. Done when the PR shows the drafted title and body and
+   every image renders.
+7. **Report.** Give the PR URL, or the full title and body when you did not
+   publish, then the validation results and any skipped checks.
 
 ## Sections
 
