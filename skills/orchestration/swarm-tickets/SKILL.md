@@ -23,7 +23,7 @@ This skill runs on both Claude Code and Codex, and workers may run on either one
 | | Claude Code | Codex |
 | --- | --- | --- |
 | Invoke this skill (user only) | `/swarm-tickets` | `$swarm-tickets` |
-| Invoke `delegate-subagents` / load `implement` | Skill tool; the "Base directory" line gives the absolute path | Available-skills catalog entry |
+| Invoke `delegate-subagents` and `pr` / load `implement` | Skill tool; the "Base directory" line gives the absolute path | Available-skills catalog entry |
 | Track the ledger | The todo/task tool, or the conversation | `update_plan`, or the conversation |
 
 Workers can't count on either harness's skill syntax, so the worker brief points at `implement` by absolute file path.
@@ -43,9 +43,10 @@ A worker is **settled** when its task is terminal and `hasPendingChildRuns` is f
 2. **Ticket source.** Get it from the user's request or the repository instructions. Read the tickets, their acceptance criteria and dependencies, and any project guidance that applies. If you can't find the source, ask the user where it is before you claim anything.
 3. **Count.** Use the ticket IDs and count the user asked for. An explicit list sets the count when the user gives none. For a backlog with no count, ask how many to claim. The count must be a positive integer. If the list and the count conflict, ask the user to resolve it.
 4. **Implement skill.** Load `implement` as the harness table shows. If your catalog doesn't have it, use this repo's copy at [`../../engineering/implement/SKILL.md`](../../engineering/implement/SKILL.md). Record its absolute path for the worker briefs. If it is missing, stop and report it.
-5. **Worker target.** Turn the user's wording ("Claude Opus 5.5 Medium with Full Access", "Codex GPT 6.1 High") into a selection by following phase 2 of `delegate-subagents`. All workers use that selection unless the user gives specific tickets their own target. Tell the user the selection line.
+5. **PR skill.** Confirm `pr` resolves as the harness table shows, or at this repo's copy at [`../../engineering/pr/SKILL.md`](../../engineering/pr/SKILL.md). You invoke it in phase 6, so don't load it yet. If it is missing, tell the user before you claim anything.
+6. **Worker target.** Turn the user's wording ("Claude Opus 5.5 Medium with Full Access", "Codex GPT 6.1 High") into a selection by following phase 2 of `delegate-subagents`. All workers use that selection unless the user gives specific tickets their own target. Tell the user the selection line.
 
-Done when: `delegate-subagents` is loaded, and the source, count, `implement` path, and worker selection are all resolved, or a blocker has been reported to the user.
+Done when: `delegate-subagents` is loaded, `pr` resolves, and the source, count, `implement` path, and worker selection are all resolved, or a blocker has been reported to the user.
 
 ## 2. Claim
 
@@ -129,7 +130,13 @@ Done when: every claimed ticket is settled and recorded as accepted, blocked, or
 
 ## 6. Deliver
 
-Review the combined changes against every ticket's acceptance criteria and do any integration work that spans tickets. Then follow the remaining validation and delivery steps from `implement` once for the whole batch, using the branch and PR structure the user asked for. Stage only changes the batch owns. Report checks you couldn't run, and failures that existed before the batch, as they are.
+Review the combined changes against every ticket's acceptance criteria and do any integration work that spans tickets. Then, once for the whole batch:
+
+1. **Validate.** Run the repository's typecheck and full test suite on the combined changes.
+2. **Commit and push.** Use the branch and PR structure the user asked for. Stage only changes the batch owns.
+3. **Open the PRs.** For each PR the batch opens or updates, invoke `pr` as the harness table shows. If your catalog doesn't have it, read this repo's copy at [`../../engineering/pr/SKILL.md`](../../engineering/pr/SKILL.md). Ask it to publish, and give it the base, the head, the batch's tickets, and the worker models. The file it writes is the PR body. Never open or update a PR with a description you wrote by hand, such as through a bare `gh pr create` or `glab mr create`.
+
+Report checks you couldn't run, and failures that existed before the batch, as they are.
 
 If PR linking tools are available, call `link_pull_request` for every PR you created or worked on, then confirm the full set with `list_thread_pull_requests`. Close tickets in the tracker only when the source's rules and the user's authorization allow it. A worker finishing is not enough to close a ticket.
 
