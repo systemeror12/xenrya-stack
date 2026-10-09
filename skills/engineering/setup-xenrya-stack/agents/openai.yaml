@@ -1,0 +1,7 @@
+interface:
+  display_name: "Setup Xenrya Stack"
+  short_description: "Set up a repo's issue tracker, triage labels, and domain docs"
+  default_prompt: "Use $setup-xenrya-stack to set up this repo's issue tracker, triage labels, and domain docs."
+
+policy:
+  allow_implicit_invocation: true
