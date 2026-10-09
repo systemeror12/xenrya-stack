@@ -1,0 +1,7 @@
+interface:
+  display_name: "Grilling"
+  short_description: "Interview relentlessly to sharpen a plan or design"
+  default_prompt: "Use $grilling to interview me about this plan until we reach a shared understanding."
+
+policy:
+  allow_implicit_invocation: false

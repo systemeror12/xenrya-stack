@@ -1,10 +1,15 @@
 ---
 name: grilling
-description: "A relentless interview to sharpen the plan or design"
+description: "A relentless interview to clear the fog in the docs around a plan or design."
+disable-model-invocation: true
 ---
 
 
 Interview the user relentlessly until you reach a shared understanding. Map this as a design tree: every decision branches into the decisions that hang off it.
+
+Grill only the **fog**: what the docs and code leave missing, vague, or contradictory. A branch the docs clearly answer is already settled, so treat it as a fact. When the docs clear every branch, say so and end the session without a round.
+
+Before the first round, invoke the `domain-modeling` skill if your skill catalog has it, and keep it running for the whole session. Its challenges become questions in the current round.
 
 Work the tree in rounds. The frontier is every decision whose prerequisites are already settled: the questions you can ask now without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
 

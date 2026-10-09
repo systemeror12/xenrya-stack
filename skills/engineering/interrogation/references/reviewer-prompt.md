@@ -22,6 +22,10 @@ Applicable repository instructions:
 
 {REPOSITORY_INSTRUCTIONS}
 
+Domain glossary (names in the change should use its terms; a name that contradicts it is a finding):
+
+{GLOSSARY}
+
 Surrounding context and accessible snapshot artifacts:
 
 {CONTEXT_FILES}
