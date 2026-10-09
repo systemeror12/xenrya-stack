@@ -46,7 +46,7 @@ Done when: every field of the brief contains a resolved fact, path, or criterion
 
 ## 2. Resolve the target
 
-The **target selection** is everything the user said about how the child should run. Pull it out of the request, then match each part against `orchestrator_capabilities`, which reads the same live catalog as the T3 composer:
+The **target selection** is everything the user said about how the child should run. Pull it out of the request, then match each part against `orchestrator_capabilities`, which reads the same live catalog as the T3 composer. A T3-owned child also needs `appOwnedSubagents` in that response.
 
 | The user says | `delegate_task` field | Resolve it to |
 | --- | --- | --- |
