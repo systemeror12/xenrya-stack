@@ -16,15 +16,11 @@ certify the credits for the request they had entered themselves.
 **API: `leave-monetization.service.ts`**
 - `submit`: refuses `AUTHENTICATED_SUBMISSION` with
   `MONETIZATION_ATTESTATION_FORBIDDEN` (403) when the actor's Employee is not
-  the subject. The check runs before the idempotent replay, so a stored result
-  can't be replayed past it.
-- `certify`: calls `assertActorSeparation` with `prohibitSubmitter` and the new
-  `prohibitRecorder`. The recorder message is "The recording actor cannot
-  perform this Monetization step."
-- `list`: `MonetizationPage` gains `actorEmployeeId: string | null`. This is an
+  the subject, before the idempotent replay can return a stored result.
+- `certify`: refuses the recorder as well as the submitter, through the new
+  `prohibitRecorder` option on `assertActorSeparation`.
+- `list`: `MonetizationPage` gains `actorEmployeeId: string | null`, an
   additive change.
-- Adds an `actorEmployeeId(transaction, context)` helper and uses it for the
-  existing subject check.
 
 **Web: `leave-monetization-workspace.tsx`**
 - When the viewer is not the subject, the Attestation select offers only

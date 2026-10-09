@@ -16,8 +16,8 @@ author anything. Every claim rests on **proof**:
 1. **Gather.** Read the commits and the full diff between **base** and
    **head**. Describe what the code does. When you are describing an existing
    PR, its current description and conversation stay closed unless the user
-   opens them. Done when every changed file is accounted for in Changes or in
-   Risk.
+   opens them. Done when every changed file falls under a Changes bullet or a
+   Risk note.
 2. **Title.** Write the title as `<type>(<scope>): <description>`.
    - **type:** the dominant change, such as `fix` for a closed gap or `feat`
      for a new capability.
@@ -56,7 +56,7 @@ author anything. Every claim rests on **proof**:
 | -------------------- | -------------------------------------------------------------------------------------------- |
 | **Summary**          | The behaviour after this PR, in two to four sentences.                                       |
 | **Why**              | What was wrong or missing before, as something a user or record would show.                  |
-| **Changes**          | Grouped by app or package. Each bullet names the function, field, or component, and its new behaviour. |
+| **Changes**          | A summary grouped by app or package: one bullet per behaviour change, naming the function, field, or component that carries it. Tests, types, helpers, and call sites fold into the bullet they serve. |
 | **Before and After** | An image table per changed screen, each with one line on what differs. With no images: `No image attached.` followed by the reason. |
 | **Validation**       | A table of check, command, and result. Then the temporary steps, and what wasn't run.          |
 | **Risk**             | Contract changes, behaviour that existing clients will notice, and coverage that was lost.    |
