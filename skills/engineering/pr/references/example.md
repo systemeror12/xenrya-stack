@@ -79,3 +79,5 @@ unchecked.
   longer exercised in the browser.
 
 Refs #460
+
+Model: Claude Opus 5.5
