@@ -12,7 +12,14 @@ Parent: Claude Opus 5.5 · High  ──delegate_task──▶  Child: Claude Opu
 Parent: Claude Opus 5.5 · High  ──delegate_task──▶  Child: Codex GPT-6.1-Sol · High · full-access
 ```
 
-You own integration and the final answer. The workflow has four phases: **define → resolve target → dispatch → assess**. Other skills, such as `swarm-tickets`, write their own briefs and then follow phases 2–4 here for their workers.
+You own integration and the final answer.
+
+Two rules hold in every phase:
+
+- **Children come from `delegate_task` only.** Never create a child with `t3_thread_launch` or `create_threads`, and never continue one with `t3_thread_send`. Those make top-level threads that never report back to this one, so you can't wait for them, read their results, or cancel them. T3's instructions to use `t3_thread_launch` for work in its own worktree cover top-level threads the user asks for, not children. To give a child its own worktree, follow [Workspace](#workspace).
+- **Wait by ending your turn.** A child's completion wakes this thread with a notification. Don't run `sleep`, don't poll `task_status` in a loop, and don't call `t3_thread_wait` on a child's thread.
+
+The workflow has four phases: **define → resolve target → dispatch → assess**. Other skills, such as `swarm-tickets`, write their own briefs and then follow phases 2–4 here for their workers.
 
 ## Harness notes
 
@@ -23,6 +30,7 @@ This skill runs on both Claude Code and Codex. The instructions use bare T3 tool
 | T3 tool names | `mcp__t3-code__<tool>` | `mcp__t3_code__<tool>`; in code mode, `tools.mcp__t3_code__<tool>(args)` |
 | T3 tools missing | Listed as deferred: load the schemas with ToolSearch, e.g. `select:mcp__t3-code__orchestrator_capabilities,mcp__t3-code__delegate_task,mcp__t3-code__task_status,mcp__t3-code__task_cancel` | Make one direct call to `orchestrator_capabilities` before you conclude T3 is unavailable |
 | Native subagents | Agent tool | Codex native subagents |
+| Wait on a shell process | Bash with `run_in_background: true` running an `until` loop, or the Monitor tool | A background terminal session |
 
 ## 1. Define the assignment
 
@@ -85,17 +93,42 @@ Call `delegate_task` with:
 - `mode="async"`: use `wait` only when this turn can't continue without the result. On `wait`, `timeoutMs` only limits how long the parent waits; the child keeps running. If the call returns `waitTimedOut`, keep the `taskId` and follow up with `task_status`.
 - `clientRequestId`: distinct for each assignment or review round, and reused unchanged when retrying that same dispatch. If a dispatch response is lost, retry with the same key so you don't create a second child.
 
-The child works in the parent's checkout because `delegate_task` has no `workspaceStrategy`. Give concurrent writers disjoint file ownership. A delegated task is a child of this conversation. An independent top-level conversation needs its own explicit request from the user.
+### Workspace
+
+`delegate_task` has no workspace parameter. The child works in whatever directory its brief names, and its shell may start in the parent's checkout.
+
+- **Shared checkout** (the default). Give the parent's checkout path, and give concurrent writers disjoint file ownership.
+- **Own worktree.** When a child needs its own branch or isolated state, create the worktree yourself before you dispatch (`git worktree add -b <branch> <path> <base>`) and run the repository's worktree setup script in it. Run setup for one worktree at a time. Then put this in the brief's Workspace field:
+  ```text
+  Workspace: <absolute worktree path> on branch <branch>. Your shell may start in
+  <parent checkout path>. That is another checkout: do NOT edit files or run
+  commands there. Run every command with <absolute worktree path> as the working
+  directory and use absolute paths inside it.
+  ```
+
+A delegated task is a child of this conversation. An independent top-level conversation needs its own explicit request from the user, even when the work needs its own worktree.
 
 Record the returned `taskId` together with the selection line. For native subagents, record their native agent identifier and use the native lifecycle tools.
 
-Keep doing independent parent work while the child runs. When only child work remains, end the turn, and T3 will deliver the child's completion as a notification. Call `task_status` when you need the result mid-turn. If a wait times out, the child is still running: follow the existing task rather than dispatching a copy.
+### Waiting
+
+Keep doing independent parent work while the child runs. Then wait in one of these ways only:
+
+| Waiting for | Do this |
+| --- | --- |
+| A T3 child | End the turn. Tell the user which `taskId`s are running. T3 wakes you with a notification when each one finishes. |
+| A child's result needed later in this same turn | One `task_status` call, or dispatch with `mode="wait"` |
+| A shell process, such as a validation run or a failed child's leftover test run | The harness's background waiting tool from the [harness table](#harness-notes). It notifies you when the process exits. |
+
+If a wait times out, the child is still running: follow the existing task rather than dispatching a copy.
 
 Done when: every assignment has a `taskId` recorded with its selection.
 
 ## 4. Assess the result
 
-**Reading status.** `task_status` reports a `workState` of active work, `waiting_for_children`, or `result_available`. Read the published `summary`. Reading a terminal result acknowledges its automatic delivery. A finished child turn that still has live nested work, or `hasPendingChildRuns: true`, is not a finished delegated task.
+**Reading status.** When a completion notification arrives, call `task_status` once for that `taskId`. It reports a `workState` of active work, `waiting_for_children`, or `result_available`. Read the published `summary`. Reading a terminal result acknowledges its automatic delivery. A finished child turn that still has live nested work, or `hasPendingChildRuns: true`, is not a finished delegated task.
+
+**Failed children.** A child can fail for reasons outside its work, such as a rate limit, and it may leave processes running in its workspace. Check for them before you act. If there are any, wait on them with the background waiting tool, then inspect what the child changed. Retry the same `clientRequestId` only when the dispatch itself was lost. When the child ran and then failed, start a new round.
 
 **Checking the work.** Compare the deliverables and evidence against the brief's "Done when" criteria. Inspect the artifacts the child produced and run any remaining integration checks. Resolve missing evidence or open objections before you present the work as complete.
 

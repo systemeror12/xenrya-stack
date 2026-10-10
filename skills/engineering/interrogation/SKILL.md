@@ -25,6 +25,7 @@ Identify what to review from context:
 - If the user points at specific files or a diff, use that
 - If on a feature branch, identify the appropriate base branch and use `git diff BASE...HEAD` for the committed changeset
 - If the user's message references recent work, gather the relevant files
+- If the user names several PRs ("interrogate the 3 PRs"), review each PR as its own scope. For each one, record its number, base, head commit, and checkout or worktree path, and freeze its diff to a file such as `/tmp/interrogation/pr-<N>.diff`
 
 Include staged, unstaged, and untracked changes when they are part of the requested scope. Capture the checkout path, base/head commits where relevant, diff or file contents, and surrounding context before dispatch. Every reviewer must receive the same review snapshot and applicable repository instructions.
 
@@ -37,7 +38,7 @@ Before spawning reviewers, state the intent explicitly. Derive this from:
 - PR description if one exists
 - The code itself
 
-Write one clear paragraph. If you're unsure about the intent, ask the user before proceeding.
+Write one clear paragraph for each scope; with several PRs, each PR's intent comes from its ticket and description. If you're unsure about the intent, ask the user before proceeding.
 
 ## Step 3, Delegate Reviewers
 
@@ -51,9 +52,9 @@ Read [the reviewer prompt](references/reviewer-prompt.md), [review rubric](refer
 
 Reviewers receive only their supplied task prompt, so include the needed context or absolute paths to accessible snapshot artifacts. Keep each initial review independent of the other reviewers' findings and send the same filled prompt to every selected model.
 
-Use T3-owned child tasks through `delegate_task`, with `role:"review"`, `mode:"async"`, and inherited permission modes. Pass the shared brief as `task` and the resolved selection as `target:{providerInstanceId,model}`. For an inherited selection, omit the corresponding target overrides. Launch independent reviewers together when the harness supports parallel tool calls. Retain one stable `clientRequestId` per reviewer/round and every returned `taskId` with its actual provider/model.
+Use T3-owned child tasks through `delegate_task`, with `role:"review"`, `mode:"async"`, and inherited permission modes. Pass the shared brief as `task` and the resolved selection as `target:{providerInstanceId,model}`. For an inherited selection, omit the corresponding target overrides. With several PRs, give each PR its own reviewers, one per selected model, with that PR's intent and diff. Title each task `Interrogate PR #<N> (<ticket>)` and give it a `clientRequestId` such as `interrogate-<date>-pr<N>-<model>-r1`. Launch independent reviewers together when the harness supports parallel tool calls. Retain one stable `clientRequestId` per reviewer/round and every returned `taskId` with its actual provider/model.
 
-The brief must prohibit repository edits, applying fixes, commits, pushes, and PR creation. `role:"review"` labels the task; it does not enforce a filesystem restriction, and T3 has no `readonly` or `subagent_type` argument. Child reviews belong to this conversation and require no new top-level threads.
+The brief must prohibit repository edits, applying fixes, commits, pushes, PR creation, migrations, and database writes. `role:"review"` labels the task; it does not enforce a filesystem restriction, and T3 has no `readonly` or `subagent_type` argument. Child reviews belong to this conversation: never create reviewers with `t3_thread_launch` or `create_threads`.
 
 Follow `delegate-subagents` for completion notifications, `task_status` result collection, cancellation, and any additional review rounds. When only reviewers remain, end the turn and resume on their completion notifications. Collect published results before issuing the verdict; a completed child turn with pending descendants is still unfinished work. Failed, cancelled, or unavailable reviewers must be reported as incomplete coverage.
 
@@ -88,7 +89,7 @@ For each finding, include:
 
 ## Output Format
 
-Present the verdict in this structure:
+Present the verdict in this structure. With several PRs, start with a table of PR, reviewers, and Act On count, then give one full verdict per PR.
 
 ### Intent
 
@@ -119,3 +120,12 @@ Identify omitted reviewers, unavailable targets, and failed tasks. Distinguish t
 ### Agreement Map
 
 [Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
+
+## After the Verdict
+
+Stop after the verdict. Apply nothing until the user asks. When the user asks for fixes:
+
+- If the PRs came from `swarm-tickets`, its phase 7 (Revise) does the fixes. It sends each PR's Act On findings back to that ticket's original worker as a new round in the same workspace, then runs `pr` again for each changed PR.
+- Otherwise, follow `delegate-subagents` phase 4 for a correction round, or fix the code yourself when the user asks you to.
+
+In both cases, list the findings being fixed and the ones left alone, so the fixer changes only what was accepted.
