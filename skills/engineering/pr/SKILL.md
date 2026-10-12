@@ -45,10 +45,20 @@ author anything. Every claim rests on **proof**:
 6. **Publish.** Open or update the PR only when the user or the calling skill
    asks. If a PR already exists for the branch, update its title and body.
    Upload the images to the PR. When PR-linking tools are available, link the
-   PR to the thread. Done when the PR shows the drafted title and body and
-   every image renders.
-7. **Report.** Give the PR URL, or the full title and body when you did not
-   publish, then the validation results and any skipped checks.
+   PR to the thread by its URL, so T3 resolves the host. Done when the PR shows
+   the drafted title and body and every image renders.
+7. **Guide.** Only when the user, the calling skill, or the repository
+   instructions ask for a review guide. After the push, call
+   `write_pull_request_guides` with the PR's URL. It returns at once and a
+   guide takes minutes, so don't wait. Record the outcome: `started`,
+   `running`, or `failed` and why. "Review guides are off" or a repository
+   with no checkout here is a skipped step, not a blocker. When updating a
+   PR, call `read_pull_request_guide` first, and rewrite only a guide that
+   exists and is `stale`. Done when the guide's outcome is recorded, or the
+   step is skipped because nobody asked.
+8. **Report.** Give the PR URL, or the full title and body when you did not
+   publish, then the validation results, any skipped checks, and the review
+   guide's outcome when one was asked for.
 
 ## Sections
 
@@ -60,6 +70,6 @@ author anything. Every claim rests on **proof**:
 | **Before and After** | An image table per changed screen, each with one line on what differs. With no images: `No image attached.` followed by the reason. |
 | **Validation**       | A table of check, command, and result. Then the temporary steps, and what wasn't run.          |
 | **Risk**             | Contract changes, behaviour that existing clients will notice, and coverage that was lost.    |
-| Issue reference      | `Closes #N` when this PR completes the issue; `Refs #N` for partial or uncertain work.        |
+| Issue reference      | The closing reference `docs/agents/issue-tracker.md` documents, such as `Closes #N`, when this PR completes the issue; `Refs #N` for partial or uncertain work. |
 | Attribution          | A line the harness asks you to end PR descriptions with, such as `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. It goes directly above the Model line. Leave it out when the harness doesn't ask for one. |
 | Model                | The last line: `Model: <display name>`, the display name of the model you run as (such as `Claude Opus 5.5`), not its model ID. When other models wrote the branch's code, such as delegated workers, list every display name, comma-separated. |
