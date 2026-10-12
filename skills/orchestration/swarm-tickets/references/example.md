@@ -2,6 +2,8 @@
 
 This batch ran in the `lingkod-hr` repository. The parent was Claude Opus 5.5 and the workers were Claude Opus 5.5 · Medium. It shows every phase, then one review and one correction round. The turn boundaries are marked, because they are where the workflow most often goes wrong.
 
+The batch originally ran its workers as `delegate_task` children. It is shown here with launched worker threads, which is how the skill runs now.
+
 ## Turn 1: the request
 
 ```text
@@ -13,7 +15,7 @@ https://github.com/systemeror12/lingkod-hr/issues/466
 each tickets have its own worktree origin/dev
 ```
 
-**Preflight.** The parent invoked `delegate-subagents`, loaded the T3 schemas, read the three issues and the ticket rules they link to, and read `AGENTS.md`, which names `scripts/setup-worktree.sh`. Selection: `claudeAgent · claude-opus-5-5 · effort=medium · full-access`. Base: `origin/dev` at `0f68ea9`. Baseline: `format:check` already failed on `mandatory-leave-evaluator.ts`.
+**Preflight.** The parent invoked `delegate-subagents`, loaded the T3 schemas, read the three issues and the ticket rules they link to, and read `AGENTS.md`, which names `scripts/setup-worktree.sh`. Selection: `claudeAgent · claude-opus-5-5 · effort=medium · full-access`, which the parent's own full-access mode allows. Base: `origin/dev` at `0f68ea9`. Baseline: `format:check` already failed on `mandatory-leave-evaluator.ts`.
 
 **Claim.** It assigned #464, #465, and #466 to the user on GitHub, which is the tracker's claim convention.
 
@@ -30,21 +32,19 @@ for i in 464 465 466; do
 done
 ```
 
-Each worktree got its own database (`hris_swarm_issue_<N>`) and ports. The tickets don't depend on each other, so all three went in wave 1. Two of them were likely to add a migration.
+Each worktree got its own database (`hris_swarm_issue_<N>`) and ports. The lingkod-hr T3 project saves no setup script, so letting `t3_thread_launch` create the worktrees would have skipped this setup. The tickets don't depend on each other, so all three went in wave 1. Two of them were likely to add a migration.
 
 > **What went wrong:** no migration numbers were reserved, and all three workers took `0120`. At delivery the parent had to rename two migration directories and fix `_prisma_migrations` in two worktree databases. Reserving `0120`, `0121`, and `0122` in the briefs avoids that.
 
-**Dispatch.** Three `delegate_task` calls in one message, not `t3_thread_launch`:
+**Dispatch.** Three `t3_thread_launch` calls in one message, each bound to its worktree:
 
 ```json
 {
-  "title": "#464: Set authTime at TOTP confirmation in forced enrollment",
-  "role": "implementation",
-  "mode": "async",
-  "target": {"providerInstanceId": "claudeAgent", "model": "claude-opus-5-5", "options": {"effort": "medium"}},
+  "title": "#464: Set authTime at TOTP confirmation in forced enrollment [swarm-20261009-a-464-a1]",
+  "modelSelection": {"instanceId": "claudeAgent", "model": "claude-opus-5-5", "options": {"effort": "medium"}},
   "runtimeMode": "full-access",
-  "clientRequestId": "swarm-20261009-a-464-a1",
-  "task": "Read the skill at /home/xenrya/.claude/skills/implement/SKILL.md and follow it for this ticket. ..."
+  "workspaceStrategy": {"type": "existing_worktree", "worktreePath": "/home/xenrya/.t3/worktrees/lingkod-hr/swarm-issue-464", "branch": "t3code/implement-issue-464"},
+  "message": "Read the skill at /home/xenrya/.claude/skills/implement/SKILL.md and follow it for this ticket. ..."
 }
 ```
 
@@ -52,24 +52,23 @@ The Workspace field of that brief:
 
 ```text
 Workspace: /home/xenrya/.t3/worktrees/lingkod-hr/swarm-issue-464 on branch
-`t3code/implement-issue-464`, created from origin/dev (0f68ea9). Your shell may
-start in /home/xenrya/Desktop/lingkod-hr — that is the developer's main
-checkout; do NOT edit or run commands there. Run every command with that
-worktree as the working directory and use absolute paths inside it. The
-worktree's setup gate already passed (`Worktree ready`, own database
-hris_swarm_issue_464, E2E ports web 28530 / API 28531). Node via
-`fnm exec --using .node-version` if `node` isn't on PATH.
+`t3code/implement-issue-464`, created from origin/dev (0f68ea9). This thread is
+bound to it: run every command there. The worktree's setup gate already passed
+(`Worktree ready`, own database hris_swarm_issue_464, E2E ports web 28530 /
+API 28531). Node via `fnm exec --using .node-version` if `node` isn't on PATH.
 ```
 
-**End of turn 1.** The parent reported the selection line, the three worktrees, and the ticket → `taskId` table, then ended the turn. It did not sleep or poll.
+> **What went wrong:** batches `swarm-20261009-a` and `swarm-20261010-a` ran their workers as `delegate_task` children. Each brief named its worktree and the work landed there, but every child inherited the parent's checkout binding, so T3 labelled all of them with branch `dev`. A launched thread bound with `existing_worktree` shows its real branch.
 
-## Turns 2–4: completion notifications
+The parent recorded each `threadId` and run tag, then reported the selection line, the three worktrees, and the ticket → thread table. It did not end the turn.
 
-Each `Delegated task "#464: …" finished` notification started a turn. The parent called `task_status` once, read the diff in that worktree, and checked each acceptance criterion. One example: #465 added a migration because `security_events` has forced row-level security, and the parent compared it with the precedent in migration `0115`. Then it recorded the ticket as accepted. While other workers were still running, it ended the turn with the updated table.
+## Turn 1, continued: waiting and accepting
+
+The parent called `t3_thread_wait` on #464's thread with `timeoutMs: 600000`. It timed out once, so the parent checked the thread with `t3_thread_list` (still `running`) and waited again. When #464 returned, the parent read the worker's report with `t3_thread_read`, read the diff in that worktree, and checked each acceptance criterion. Then it waited on #465 and #466 the same way. #465 had already finished, so its wait returned at once. One example of acceptance: #465 added a migration because `security_events` has forced row-level security, and the parent compared it with the precedent in migration `0115`.
 
 > **What went wrong:** all three workers ran the full database suite at the same time. One run crashed on an unrelated file, and `fnm` raced on a shared symlink. The Validation field should leave the full and database suites to the parent.
 
-## Turn 4, continued: deliver
+## Turn 1, continued: deliver
 
 Accepting #466, the last ticket, started delivery in the same turn:
 
@@ -87,7 +86,7 @@ $interrogation to 3 PRs
 $delegate-subagents use GPT 6.1 Sol High as subagents
 ```
 
-The parent froze each PR's diff (`git diff 0f68ea9...HEAD > /tmp/interrogation/pr-<N>.diff`). It then dispatched one reviewer per PR with `delegate_task` and `role: "review"`, with a `clientRequestId` such as `interrogate-20261009-pr495-gpt61sol-r1`, and ended the turn. When the reviews came back, it gave a verdict per PR: Act On, Consider, Noted, Dismissed.
+The parent froze each PR's diff (`git diff 0f68ea9...HEAD > /tmp/interrogation/pr-<N>.diff`) and resolved the roster to `codex · gpt-6.1-sol · reasoningEffort=high`. Each PR lives in its own worktree, so the parent launched one lead thread per PR, titled like `Interrogate PR #495 (#464) [interrogate-20261009-pr495-r1]` and bound to that PR's worktree with `existing_worktree`. It did not reuse the worker threads. Each lead dispatched its reviewer with `delegate_task`, `role: "review"`, and `mode: "wait"`, so the reviewer inherited the lead's worktree binding. The parent waited on each lead, read its verdict (Act On, Consider, Noted, Dismissed), and presented the three verdicts with a summary table.
 
 ## Revise: a correction round
 
@@ -95,7 +94,7 @@ The parent froze each PR's diff (`git diff 0f68ea9...HEAD > /tmp/interrogation/p
 fix the issue by assigning the finds to its respective previous subagents
 ```
 
-"Previous subagents" means each ticket's original worker selection, run as a new `delegate_task` round in the same worktree. It does not mean the reviewers, and it does not mean messaging the old threads. Each brief kept the original fields and added:
+"Previous subagents" means each ticket's worker thread. It does not mean the reviewers or the lead threads. The parent sent each round to the worker thread with `t3_thread_send` and `mode: "queue"`. Each message repeated the original Validation, Scope, and Return fields and added:
 
 ```text
 This is round 2 (correction) for ticket #464. You implemented it in round 1;
@@ -107,7 +106,7 @@ fix. Fix only that.
 Do NOT change: <dismissed findings and why>
 ```
 
-The `clientRequestId`s were `swarm-20261009-a-<ticket>-a2`. All three round-2 workers hit a rate limit and failed, but their test runs kept going in the worktrees. The parent waited for those processes with a background Bash `until` loop rather than starting new workers, then inspected the worktrees and finished the validation itself, one worktree at a time.
+The `clientRequestId`s were `swarm-20261009-a-<ticket>-a2`. All three round-2 workers hit a rate limit and failed, but their test runs kept going in the worktrees. The parent waited for those processes with a background Bash `until` loop rather than sending new rounds, then inspected the worktrees and finished the validation itself, one worktree at a time.
 
 > **What went wrong:** the parent pushed the fixes and then wrote the new PR bodies by hand with `gh pr edit`, judging `pr` too heavy for a small change. Hard rule 3 says every update goes through `pr`, whatever its size.
 
