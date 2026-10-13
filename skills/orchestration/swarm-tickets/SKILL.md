@@ -1,6 +1,6 @@
 ---
 name: swarm-tickets
-description: "Claim a batch of tickets and implement them in parallel, one T3 Code worker thread per ticket."
+description: "Use for \"swarm\", \"swarm tickets\", \"swarm these tickets\", \"work tickets in parallel\", or \"claim N tickets\". Claims a batch of tickets and implements each in its own T3 Code worker thread."
 disable-model-invocation: true
 metadata:
   opencode/autoinvoke: "false"

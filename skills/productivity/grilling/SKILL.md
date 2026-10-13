@@ -1,6 +1,6 @@
 ---
 name: grilling
-description: "A relentless interview to clear the fog in the docs around a plan or design."
+description: "Use for \"grill me\", \"grilling\", \"interview me\", \"poke holes in this plan\", \"question this design\", or \"clear the fog\". Relentless interview rounds settle what the docs leave unclear in a plan or design."
 disable-model-invocation: true
 ---
 

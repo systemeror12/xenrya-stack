@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: "Use for requested TDD, failing tests, regression tests, or bugs with a clear, inexpensive local test path. Use alternative verification when the test path is unclear or requires expensive integration setup."
+description: "Use for \"TDD\", \"test first\", \"red-green\", \"failing test\", \"regression test\", or \"fix this bug\". Proves the bug with a test that fails before the fix and passes after, or the closest practical check."
 ---
 
 # TDD

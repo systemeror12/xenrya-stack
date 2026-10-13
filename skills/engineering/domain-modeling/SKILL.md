@@ -1,6 +1,6 @@
 ---
 name: domain-modeling
-description: "Build and sharpen a project's domain model. Use when discussing codebase terminology, writing or editing a GLOSSARY.md, or recording or editing an ADR."
+description: "Use for \"domain model\", \"glossary\", \"GLOSSARY.md\", \"ubiquitous language\", \"define this term\", \"what should we call this\", \"ADR\", or \"record this decision\". Sharpens the project's terms and records settled decisions as ADRs."
 ---
 
 # Domain Modeling
