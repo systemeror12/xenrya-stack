@@ -1,0 +1,7 @@
+interface:
+  display_name: "Prototype"
+  short_description: "Prototype UI as switchable A, B, C variants"
+  default_prompt: "Use $prototype to build A, B and C variants of this UI with live links, a variant switcher, and the fonts and colors each one uses."
+
+policy:
+  allow_implicit_invocation: false
