@@ -1,6 +1,6 @@
 ---
 name: pr
-description: "Pull request writing. Use when preparing or opening a pull request for a branch."
+description: "Pull request writing. Use when preparing or opening a pull request for a branch, including a release PR that promotes an integration branch to a release branch."
 ---
 
 # PR
@@ -10,6 +10,17 @@ author anything. Every claim rests on **proof**:
 - the diff;
 - before and after images;
 - validation that you actually ran.
+
+## Release PRs
+
+A PR is a **release PR** when all three hold:
+- the head is an integration branch, such as `dev`;
+- the base is a release or main branch, such as `version-4` or `main`;
+- the range holds only merges of PRs that were already reviewed.
+
+For a release PR, follow [`references/release.md`](references/release.md)
+instead of steps 1 to 5 and the [sections](#sections) below. Then continue
+from step 6, and report the merge check in place of validation results.
 
 ## Steps
 
