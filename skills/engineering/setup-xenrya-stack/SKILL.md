@@ -1,6 +1,6 @@
 ---
 name: setup-xenrya-stack
-description: "Repo setup for the xenrya-stack skills: issue tracker, triage labels, and domain docs. Use when a repo has no docs/agents/issue-tracker.md, or to switch issue trackers."
+description: "Use for \"set up xenrya-stack\", \"setup-xenrya-stack\", \"set up the issue tracker\", \"switch issue trackers\", or \"triage labels\". Writes the docs/agents files the xenrya-stack skills read: issue tracker, triage labels, and domain docs."
 ---
 
 # Setup Xenrya Stack

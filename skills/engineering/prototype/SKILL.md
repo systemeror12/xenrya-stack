@@ -1,6 +1,6 @@
 ---
 name: prototype
-description: "Prototype a UI as at least three switchable variants (A, B, C), each at a live URL and shown with its fonts and color hex codes."
+description: "Use for \"prototype\", \"mock up\", \"A/B/C variants\", \"design options\", \"show me a few looks\", or \"try some variants\". Builds at least three switchable UI variants, each at a live URL with its fonts and color hex codes."
 disable-model-invocation: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: implement
-description: "Implement work from a specification or tickets, then test, review, commit, push, and prepare a pull request."
+description: "Use for \"implement\", \"implement this spec\", \"implement this ticket\", \"build this\", \"work this ticket\", or \"ship this\". Builds the work, tests and reviews it, then commits, pushes, and opens a pull request."
 metadata:
   opencode/autoinvoke: "false"
 ---

@@ -1,6 +1,6 @@
 ---
 name: delegate-subagents
-description: "Delegate scoped work to a subagent on a chosen harness, model, and reasoning effort through T3 Code. Use when the user asks for a subagent, work on another harness (Claude, Codex), or a specific model or effort for delegated work."
+description: "Use for \"subagent\", \"delegate this\", \"hand this off\", \"run this on Codex\", \"run this on Claude\", \"use another model\", or \"at medium effort\". Runs scoped work on a chosen harness, model, and effort through T3 Code."
 ---
 
 # Delegate Subagents

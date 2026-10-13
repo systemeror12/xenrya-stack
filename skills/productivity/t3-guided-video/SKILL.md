@@ -1,6 +1,6 @@
 ---
 name: t3-guided-video
-description: "Record readable T3 browser walkthroughs with guided scrolling, highlighting, pacing, packaging, and visual verification."
+description: "Use for \"record a walkthrough\", \"walkthrough video\", \"guided video\", \"record a demo\", \"demo video\", or \"screen recording\". Records readable T3 browser walkthroughs with framing, highlighting, pacing, and visual checks."
 disable-model-invocation: true
 ---
 

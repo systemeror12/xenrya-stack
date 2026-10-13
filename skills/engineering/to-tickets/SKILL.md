@@ -1,6 +1,6 @@
 ---
 name: to-tickets
-description: "Break a spec, or a small issue such as a reported bug, into small tickets that each pass interrogation as one PR."
+description: "Use for \"tickets\", \"break this into tickets\", \"ticket this spec\", \"slice this into PRs\", or \"ticket this bug\". Breaks a spec, or a small issue, into tickets that each pass interrogation as one PR."
 disable-model-invocation: true
 ---
 

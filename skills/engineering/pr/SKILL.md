@@ -1,6 +1,6 @@
 ---
 name: pr
-description: "Pull request writing. Use when preparing or opening a pull request for a branch, including a release PR that promotes an integration branch to a release branch."
+description: "Use for \"open a PR\", \"write the PR description\", \"update the PR\", \"PR body\", \"release PR\", or \"promote dev to main\". Writes a pull request description where every claim rests on the diff, images, and checks that ran."
 ---
 
 # PR

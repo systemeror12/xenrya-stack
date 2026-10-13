@@ -1,6 +1,6 @@
 ---
 name: specs
-description: "Turn an issue into a lean one-page spec from the source-of-truth docs."
+description: "Use for \"spec\", \"write a spec\", \"spec this issue\", \"turn this issue into a spec\", or \"one-page spec\". Builds a lean spec from the source-of-truth docs and turns every gap into a decision."
 disable-model-invocation: true
 ---
 
