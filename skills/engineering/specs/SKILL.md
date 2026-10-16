@@ -10,6 +10,17 @@ Write a **lean** spec: one page a human reads in five minutes. It must be built
 only from the **source of truth**, and every **gap** goes to the human as a
 decision.
 
+## Where the spec lives
+
+The spec lives in the thread, where the user reads and answers it:
+
+- Show the whole spec in your reply. A file path or a summary is not enough.
+- Don't write it to a file unless the user asks for one. Publishing doesn't
+  need a local copy.
+- After every revision, such as an answered decision, show the whole spec
+  again. The newest spec in the thread is the current one, and anything you
+  publish matches it.
+
 ## Steps
 
 1. **Gather.** Read these, and treat them as your only evidence:
@@ -20,10 +31,10 @@ decision.
 
    Existing specs and code stay closed unless the user opens them. Done when
    every reference the issue names has been read.
-2. **Draft.** Fill the [sections](#sections) in order, in
-   `<issue-number>-<slug>.md` in the working directory. Match the depth and
-   tone of [`references/example.md`](references/example.md). Done when every
-   section has content.
+2. **Draft.** Fill the [sections](#sections) in order, as the markdown your
+   reply will show. Match the depth and tone of
+   [`references/example.md`](references/example.md). Done when every section
+   has content.
 3. **Trace.** Check each rule, scope line, and actor against a source.
    - A rule with no source is a gap.
    - Two sources that disagree are a gap.
@@ -39,8 +50,9 @@ decision.
      implementation.
 
    Done when the spec fits one page and every section is still present.
-5. **Report.** Give the file path, the number of decisions, and the top
-   recommendation. Publish to an issue, PR, or doc only when the user asks.
+5. **Report.** Reply with the number of decisions and the top
+   recommendation, then the whole spec. Publish to an issue, PR, or doc only
+   when the user asks. Done when the whole spec is in the thread.
 
 ## Sections
 

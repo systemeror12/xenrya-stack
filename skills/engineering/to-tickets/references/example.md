@@ -1,7 +1,7 @@
 # Tickets: Post approved leave and reverse cancelled leave
 
-Source: the spec for issue #174 (`174-post-approved-leave.md`). Stories (S1–S7) and
-decisions (D1–D7) refer to that spec.
+Source: the spec for issue #174. Stories (S1–S7) and decisions (D1–D7) refer
+to that spec.
 
 ## Ticket rules
 
