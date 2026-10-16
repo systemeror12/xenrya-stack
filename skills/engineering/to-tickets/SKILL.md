@@ -18,14 +18,26 @@ qualifies when:
 - the issue and the source-of-truth docs answer every question the fix
   raises, so no decision is open.
 
+## Where the tickets live
+
+The tickets live in the thread, where the user reads and approves them:
+
+- Show the whole ticket set in your reply. A file path or a summary table is
+  not enough.
+- Don't write it to a file unless the user asks for one. Publishing to the
+  issue tracker doesn't need a local copy.
+- After a revision, show each changed ticket in full, so the thread holds the
+  current version of every ticket. Anything you publish matches it.
+
 ## Steps
 
 1. **Route.** A spec takes every step below. An issue with no spec is a
    direct ticket if it meets the bar above; otherwise recommend running
    `specs` on it first, and stop. Done when you have named the route.
 2. **Gather.** Treat these as your only evidence:
-   - the spec: its stories, rules, scope, and decisions. A direct ticket uses
-     the issue instead: its body, comments, and reproduction steps;
+   - the spec, as the newest version in this thread or where the user
+     published it: its stories, rules, scope, and decisions. A direct ticket
+     uses the issue instead: its body, comments, and reproduction steps;
    - the source-of-truth docs on module boundaries, naming, API shape, and
      testing.
 
@@ -46,7 +58,7 @@ qualifies when:
 
    Done when every ticket meets the [ticket rules](#ticket-rules). A direct
    ticket stays one ticket; if it needs a second, recommend `specs`.
-5. **Write.** Write `<issue-number>-tickets.md` in the working directory,
+5. **Write.** Draft the tickets as the markdown your reply will show,
    matching [`references/example.md`](references/example.md). The sections
    are:
    - Ticket rules;
@@ -55,13 +67,14 @@ qualifies when:
    - build tickets;
    - Coverage check.
 
-   A direct ticket's file holds only the Ticket rules and its one build
-   ticket, whose header line names the issue in place of stories. Acceptance
-   includes a test that fails on the reported behaviour before the fix.
+   For a direct ticket, the draft holds only the Ticket rules and its one
+   build ticket, whose header line names the issue in place of stories.
+   Acceptance includes a test that fails on the reported behaviour before the
+   fix.
 
    Done when every ticket has a header line, an Intent, Acceptance criteria,
    and a Not in this PR list.
-6. **Check.** Verify the file:
+6. **Check.** Verify the draft:
    - every story and decision appears in the Coverage check. For a direct
      ticket, its Acceptance covers everything the issue reports;
    - every Blocked by and every Not in this PR names a real ticket;
@@ -70,12 +83,13 @@ qualifies when:
    Then read each ticket as an interrogation reviewer. Anything you would flag
    is either an acceptance criterion or listed in Not in this PR. Done when
    every ticket passes that read.
-7. **Report.** Give the file path, the route, the ticket count, and the
-   tickets that can start today. Publish to GitHub only when the user asks.
+7. **Report.** Reply with the route, the ticket count, and the tickets that
+   can start today, then the whole ticket set. Publish to the issue tracker
+   only when the user asks. Done when the whole ticket set is in the thread.
 
 ## Ticket rules
 
-Copy these into the tickets file. Every build ticket follows them.
+Copy these into the ticket set. Every build ticket follows them.
 
 - **One intent.** The Intent paragraph doubles as the PR description, and
   reviewers judge the code against it.
