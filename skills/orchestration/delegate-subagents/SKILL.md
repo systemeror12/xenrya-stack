@@ -16,7 +16,7 @@ You own integration and the final answer.
 
 Two rules hold in every phase:
 
-- **Children come from `delegate_task`, except launched workers.** Don't create a child with `t3_thread_launch` or `create_threads`. Those make top-level threads that never notify this one. Continue a child only as phase 4's [Another round](#4-assess-the-result) describes. The one exception is a **launched worker**: a worker that needs its own workspace binding in T3, such as a worktree, or one that a calling skill (`swarm-tickets`, `interrogation`) tells you to launch. A `delegate_task` child inherits this thread's checkout, so T3 would label it with the wrong branch. Follow [Launched workers](#launched-workers) for those.
+- **Children come from `delegate_task`, except launched workers.** Don't create a child with `t3_thread_launch` or `create_threads`. Those make top-level threads that never notify this one. Continue a child only as phase 4's [Another round](#4-assess-the-result) describes. The one exception is a **launched worker**: a worker that must run on a branch or worktree you choose, or one that a calling skill (`swarm-tickets`, `interrogation`) tells you to launch. A `delegate_task` child runs in this thread's checkout, or in a new worktree on a branch T3 names, so only a launch binds a worker to your branch. Follow [Launched workers](#launched-workers) for those.
 - **Wait by ending your turn.** A child's completion wakes this thread with a notification. Don't run `sleep`, don't poll `task_status` in a loop, and don't call `t3_thread_wait` on a child's thread. Launched workers are the exception: nothing wakes you for them, so you wait on them with `t3_thread_wait` as [Launched workers](#launched-workers) describes.
 
 The workflow has four phases: **define → resolve target → dispatch → assess**. Other skills, such as `swarm-tickets`, write their own briefs and then follow phases 2–4 here for their workers.
@@ -97,10 +97,11 @@ Call `delegate_task` with:
 
 ### Workspace
 
-`delegate_task` has no workspace parameter. The child works in whatever directory its brief names, and its shell may start in the parent's checkout.
+`isolation` picks the child's checkout:
 
-- **Shared checkout** (the default). Give the parent's checkout path, and give concurrent writers disjoint file ownership.
-- **Own worktree.** When a worker needs its own branch or isolated state, create the worktree yourself (`git worktree add -b <branch> <path> <base>`) and run the repository's worktree setup script in it, one worktree at a time. Then launch the worker bound to it, as [Launched workers](#launched-workers) describes, instead of calling `delegate_task`.
+- **Shared** (the default). The child works in the parent's checkout. Give its path, and give concurrent writers disjoint file ownership.
+- **`"worktree"`.** T3 creates a worktree under `~/.t3/worktrees/<project>/` from the parent's current commit, on a branch it names (`t3/<slug>`), and runs the T3 project's setup before the child starts. Use it for isolated state: a trial, an experiment, or writers whose files would collide. Uncommitted edits aren't copied, so commit what the child needs first, or point it at absolute paths in the parent's checkout. The brief can't name the worktree's path in advance: tell the child to work in the directory it starts in. T3 keeps the worktree and branch after the child finishes; remove them with `git worktree remove` and `git branch -D` once you have taken what you need.
+- **A branch you choose.** When the worker must commit to a named branch, such as a ticket's PR branch, launch it bound to that workspace, as [Launched workers](#launched-workers) describes, instead of calling `delegate_task`.
 
 A launched worker is still your worker: you own its brief, waiting, acceptance, and cancellation. Any other top-level conversation needs its own explicit request from the user.
 
@@ -143,14 +144,14 @@ Finish with the outcome, the delegate's selection line, the validation evidence,
 
 ## Launched workers
 
-A launched worker is a top-level T3 thread that you start with `t3_thread_launch` and follow as your own worker. T3 binds it to its workspace, so its thread shows the real branch. Use one only when the worker needs its own workspace binding or a calling skill says to launch it. Everything else stays on `delegate_task`.
+A launched worker is a top-level T3 thread that you start with `t3_thread_launch` and follow as your own worker. T3 binds it to its workspace, so its thread shows the real branch. Use one only when the worker must run on a branch or worktree you choose, or a calling skill says to launch it. Everything else stays on `delegate_task`.
 
 In Claude Code, load the schemas in one ToolSearch call: `select:mcp__t3-code__t3_thread_launch,mcp__t3-code__t3_thread_list,mcp__t3-code__t3_thread_wait,mcp__t3-code__t3_thread_read,mcp__t3-code__t3_thread_send,mcp__t3-code__t3_thread_interrupt,mcp__t3-code__t3_pending_request_list,mcp__t3-code__t3_pending_request_respond,mcp__t3-code__t3_queue_list,mcp__t3-code__t3_workflow_stop`.
 
 **Before launching.**
 
 - **Modes.** A launched thread can't run with broader runtime or interaction modes than this thread. `orchestrator_capabilities` reports this thread's `runtimeMode` and `interactionMode`. If the selection asks for more, such as full-access workers from an auto-accept-edits parent, report it and stop. Also check the runtime mode against the provider's `runtimeModes`, as phase 2 describes: `t3_thread_launch` doesn't.
-- **Workspace.** The checkout must already exist and its setup must have passed. T3's own preparation runs only a setup script saved in the T3 project, not the one the repository's `AGENTS.md` names, so create worktrees and run setup yourself, one at a time. Bind a worktree with `existing_worktree`. Use `{"type": "root"}` only for the project's main checkout.
+- **Workspace.** T3's preparation runs only the setup script saved in the T3 project (`t3_project_read` lists it), not the one the repository's `AGENTS.md` names. When the saved script covers the repository's setup, let T3 create the worktree: `{"type": "worktree", "baseRef": "<base branch>", "branch": "<new branch>", "startFromOrigin": <true to start from origin>}`. Otherwise create the worktree and run setup yourself, one at a time, and bind it with `existing_worktree`. Use `{"type": "root"}` only for the project's main checkout.
 
 **Launch.**
 
