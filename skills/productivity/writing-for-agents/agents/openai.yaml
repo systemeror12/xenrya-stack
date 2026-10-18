@@ -1,0 +1,7 @@
+interface:
+  display_name: "Writing for Agents"
+  short_description: "Write skills, instructions, and briefs agents follow"
+  default_prompt: "Use $writing-for-agents to write or revise this skill, instructions file, or brief so every run takes the same path through it."
+
+policy:
+  allow_implicit_invocation: true
