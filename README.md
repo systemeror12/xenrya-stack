@@ -14,6 +14,7 @@ grilling / domain-modeling → specs → to-tickets → swarm-tickets (implement
 | `specs` | user | Builds a one-page spec from the source-of-truth docs. |
 | `to-tickets` | user | Breaks a spec into tickets, one PR each. |
 | `prototype` | user | Builds three or more switchable UI variants. |
+| `improve-codebase-architecture` | user | Finds shallow modules worth deepening and grills the one you pick. |
 | `implement` | model | Builds one ticket, tests it, and opens a PR. |
 | `tdd` | model | Proves a bug with a failing test before the fix. |
 | `pr` | model | Writes a PR description backed by the diff, images, and checks. |

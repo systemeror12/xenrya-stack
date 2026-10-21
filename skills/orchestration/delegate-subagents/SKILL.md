@@ -16,7 +16,7 @@ You own integration and the final answer.
 
 Two rules hold in every phase:
 
-- **Children come from `delegate_task`, except launched workers.** Don't create a child with `t3_thread_launch` or `create_threads`. Those make top-level threads that never notify this one. Continue a child only as phase 4's [Another round](#4-assess-the-result) describes. The one exception is a **launched worker**: a worker that needs a workspace `delegate_task` can't give it, such as a worktree on a base and branch you choose, or one that a calling skill (`swarm-tickets`, `interrogation`) tells you to launch. Follow [`references/launched-workers.md`](references/launched-workers.md) for those.
+- **Children come from `delegate_task`, except launched workers.** Don't create a child with `t3_thread_launch` or `create_threads`. Those make top-level threads that never notify this one. Continue a child only as phase 4's [Another round](#4-assess-the-result) describes. The one exception is a **launched worker**: a worker that must run on a branch or worktree you choose, or one that a calling skill (`swarm-tickets`, `interrogation`) tells you to launch. A `delegate_task` child runs in this thread's checkout, or in a new worktree on a branch T3 names, so only a launch binds a worker to your branch. Follow [`references/launched-workers.md`](references/launched-workers.md) for those.
 - **Wait by ending your turn.** A child's completion wakes this thread with a notification, and a launched worker's round wakes it through the background CLI send that delivered it, as [Launched workers](references/launched-workers.md) describes. Don't run `sleep`, don't poll `task_status` in a loop, and don't call `t3_thread_wait` on a child's thread.
 
 The workflow has four phases: **define → resolve target → dispatch → assess**. Other skills, such as `swarm-tickets`, write their own briefs and then follow phases 2–4 here for their workers.
@@ -98,8 +98,11 @@ Call `delegate_task` with:
 
 ### Workspace
 
-- **Shared checkout** (the default). The child works in this thread's checkout. Give concurrent writers disjoint file ownership.
-- **Own worktree.** `isolation: "worktree"` gives the child a checkout of this thread's last commit, on a branch T3 names, after the T3 project's setup script runs. Commit what the child needs first: uncommitted edits stay behind. When the worker needs a base or branch you choose, or the setup script `AGENTS.md` names, launch it instead, as [Launched workers](references/launched-workers.md) describes.
+`isolation` picks the child's checkout:
+
+- **Shared** (the default). The child works in the parent's checkout. Give its path, and give concurrent writers disjoint file ownership.
+- **`"worktree"`.** T3 creates a worktree under `~/.t3/worktrees/<project>/` from the parent's current commit, on a branch it names (`t3/<slug>`), and runs the T3 project's setup before the child starts. Use it for isolated state: a trial, an experiment, or writers whose files would collide. Uncommitted edits aren't copied, so commit what the child needs first, or point it at absolute paths in the parent's checkout. The brief can't name the worktree's path in advance: tell the child to work in the directory it starts in. T3 keeps the worktree and branch after the child finishes; remove them with `git worktree remove` and `git branch -D` once you have taken what you need.
+- **A branch you choose.** When the worker must commit to a named branch, such as a ticket's PR branch, or needs the setup script `AGENTS.md` names, launch it bound to that workspace, as [Launched workers](references/launched-workers.md) describes, instead of calling `delegate_task`.
 
 Record the returned `taskId` together with the selection line. For native subagents, record their native agent identifier and use the native lifecycle tools.
 

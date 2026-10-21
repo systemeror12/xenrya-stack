@@ -1,0 +1,13 @@
+interface:
+  display_name: "Improve Codebase Architecture"
+  short_description: "Find deepening refactors and grill the one you pick"
+  default_prompt: "Use $improve-codebase-architecture to find shallow modules worth deepening, show them as a before/after report in this thread, and grill the one I pick."
+
+policy:
+  allow_implicit_invocation: false
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "t3-code"
+      description: "html_preview and html_render for the report in the thread"

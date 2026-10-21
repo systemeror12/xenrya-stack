@@ -1,6 +1,6 @@
 # Launched workers
 
-The launched-worker branch of [`delegate-subagents`](../SKILL.md). A **launched worker** is a top-level T3 thread that you start with `t3_thread_launch` and follow as your own worker. T3 binds it to the workspace you choose, so its thread shows the real branch. Use one only when the worker needs a workspace `delegate_task` can't give it, or a calling skill says to launch it. It is still your worker: you own its brief, waiting, acceptance, and cancellation. Phases 2 and 4 of `delegate-subagents` still apply.
+The launched-worker branch of [`delegate-subagents`](../SKILL.md). A **launched worker** is a top-level T3 thread that you start with `t3_thread_launch` and follow as your own worker. T3 binds it to the workspace you choose, so its thread shows the real branch. Use one only when the worker must run on a branch or worktree you choose, or a calling skill says to launch it. It is still your worker: you own its brief, waiting, acceptance, and cancellation. Phases 2 and 4 of `delegate-subagents` still apply.
 
 In Claude Code, load the schemas in one ToolSearch call: `select:mcp__t3-code__t3_thread_launch,mcp__t3-code__t3_thread_list,mcp__t3-code__t3_thread_wait,mcp__t3-code__t3_thread_read,mcp__t3-code__t3_thread_interrupt,mcp__t3-code__t3_pending_request_list,mcp__t3-code__t3_pending_request_read,mcp__t3-code__t3_pending_request_respond,mcp__t3-code__t3_queue_list,mcp__t3-code__t3_queue_cancel,mcp__t3-code__t3_workflow_stop`.
 
@@ -8,7 +8,7 @@ In Claude Code, load the schemas in one ToolSearch call: `select:mcp__t3-code__t
 
 - **Modes.** A launched thread can't run with broader runtime or interaction modes than this thread. `orchestrator_capabilities` reports this thread's `runtimeMode` and `interactionMode`. If the selection asks for more, such as full-access workers from an auto-accept-edits parent, report it and stop. Also check the runtime mode against the provider's `runtimeModes`, as phase 2 describes: `t3_thread_launch` doesn't.
 - **CLI.** Confirm `~/.t3/bin/t3 thread --help` runs. Without it, put the brief in `message` and wait on each worker with `t3_thread_wait` in this turn, one at a time.
-- **Workspace.** The checkout must already exist and its setup must have passed. T3's own preparation runs only a setup script saved in the T3 project, not the one the repository's `AGENTS.md` names, so create worktrees and run setup yourself, one at a time. Bind a worktree with `existing_worktree`. Use `{"type": "root"}` only for the project's main checkout.
+- **Workspace.** T3's preparation runs only the setup script saved in the T3 project (`t3_project_read` lists it), not the one the repository's `AGENTS.md` names. When the saved script covers the repository's setup, let T3 create the worktree: `{"type": "worktree", "baseRef": "<base branch>", "branch": "<new branch>", "startFromOrigin": <true to start from origin>}`. Otherwise create the worktree and run setup yourself, one at a time, and bind it with `existing_worktree`. Use `{"type": "root"}` only for the project's main checkout.
 
 **Launch.**
 
