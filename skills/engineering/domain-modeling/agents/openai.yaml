@@ -1,0 +1,7 @@
+interface:
+  display_name: "Domain Modeling"
+  short_description: "Sharpen the glossary and record decisions as ADRs"
+  default_prompt: "Use $domain-modeling to settle the terms in this design and write them to GLOSSARY.md, offering an ADR for each hard-to-reverse decision."
+
+policy:
+  allow_implicit_invocation: true

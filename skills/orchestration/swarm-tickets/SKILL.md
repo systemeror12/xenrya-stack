@@ -12,7 +12,7 @@ You are the **parent**. You pick a batch of tickets, claim them, and hand each c
 
 Workers can run on any harness, model, and effort that T3 offers, so they don't have to match the parent. For example, a Claude Opus 5.5 · High parent can run Opus 5.5 · Medium workers or Codex GPT-6.1-Sol · High workers.
 
-This skill owns the ticket workflow. All T3 Code orchestration (tool names, target resolution, launching, waiting, reading, further rounds, cancelling) lives in `delegate-subagents` and its [Launched workers](../delegate-subagents/SKILL.md#launched-workers) section, which this skill invokes in preflight and defers to at every phase that points to it.
+This skill owns the ticket workflow. All T3 Code orchestration (tool names, target resolution, launching, waiting, reading, further rounds, cancelling) lives in `delegate-subagents` and its [Launched workers](../delegate-subagents/references/launched-workers.md) reference, which this skill invokes in preflight and defers to at every phase that points to it.
 
 The workflow has seven phases, run in order: **preflight → claim → plan waves → dispatch → accept → deliver → revise**. Each phase ends on a "Done when" line. Finish that phase before starting the next. Phase 7 runs only when review findings or a base-branch update come back after delivery. [`references/example.md`](references/example.md) walks through a full batch.
 
@@ -20,20 +20,23 @@ The workflow has seven phases, run in order: **preflight → claim → plan wave
 
 These rules hold in every phase. Breaking one breaks the workflow.
 
-1. **Every worker is a launched thread.** Create each worker with `t3_thread_launch`, bound to its ticket's workspace, and follow it as [Launched workers](../delegate-subagents/SKILL.md#launched-workers) describes. Correction rounds go to the same thread with `t3_thread_send`. Never create a worker with `delegate_task` or `create_threads`: a `delegate_task` child inherits this thread's checkout, so T3 labels it with the wrong branch. Invoking this skill is the user's request for one top-level thread per ticket.
-2. **Stay in the turn while workers run.** Nothing wakes you when a launched worker finishes. After you dispatch, report the ticket → thread table, then wait with `t3_thread_wait`, one worker at a time, as `delegate-subagents` describes. Don't end the turn while a worker is running unless the user stops you, and don't run `sleep`. To wait on a shell process (a validation run, or a worker's leftover processes), use the harness's background waiting tool from the [harness table](#harness-notes).
+1. **Every worker is a launched thread.** Create each worker with `t3_thread_launch`, bound to its ticket's workspace, and follow it as [Launched workers](../delegate-subagents/references/launched-workers.md) describes. Every round, the brief included, goes to that thread through a background CLI send. Never create a worker with `delegate_task` or `create_threads`: a `delegate_task` child either shares this thread's checkout or gets a worktree of this thread's commit on a branch T3 names, so it can't be bound to the ticket's base and branch. Invoking this skill is the user's request for one top-level thread per ticket.
+2. **Wait by ending the turn.** Each worker's background send wakes you when its round ends, so after dispatching, report the ticket → thread table and end the turn. Don't run `sleep` or poll. To wait on another shell process, such as a validation run or a worker's leftover processes, use the harness's background waiting tool from the [harness table](#harness-notes).
 3. **Every PR goes through `pr`.** Each time you open or update a PR, including after a correction round or a base-branch merge, invoke the `pr` skill for that PR and publish the body it drafts. Never write a PR body yourself, and never run `gh pr create`, `gh pr edit --body`, `glab mr create`, or similar with text you wrote.
 4. **Accepting the last ticket starts delivery.** When the last ticket in the batch is accepted, go straight on to phase 6 in that turn. Stop before delivery only if the user asked you to.
 
 ## Turn map
 
-Phases 1–6 run in one turn, because nothing wakes you between workers. Each turn starts on a trigger and ends in one way only:
+Each turn starts on a trigger and ends in one way only:
 
 | Trigger | What you do | End the turn with |
 | --- | --- | --- |
-| The user's request | Phases 1–4 for the first wave. Report the selection line and the ticket → thread table. Then phase 5: wait on each worker, accept it, and dispatch the next wave once it is unblocked. Accepting the last ticket starts phase 6 | The final report with the PR links |
-| A turn that ended while workers still ran (the user interrupted, the harness ended it, or a server restart cut it and T3 sent "Continue where you left off.") | Rebuild the ledger from `t3_thread_list` and `t3_thread_read`, answer the user, then go on with phase 5 | The final report with the PR links |
-| Review findings or a base-branch update | Phase 7 | The updated final report |
+| The user's request | Phases 1–4 for the first wave | The selection line and the ticket → thread table |
+| A worker's send exits | Phase 5 for that worker: accept it or send a correction, and dispatch any wave it unblocks. Accepting the last ticket starts phase 6 | The workers still running, or the final report with the PR links |
+| A turn with no send exit to explain it: the user interrupted, or T3 sent "Continue where you left off." after a restart | Check every running worker as Launched workers' Send a round describes, answer the user, then go on with phase 5 | As for a send exit |
+| Review findings, a base-branch update, or a PR watch waking you | Phase 7 | The updated final report |
+
+When the ledger is no longer in your context, because this thread was compacted, rebuild it first: from the last ledger table you reported, or from `t3_thread_list` with `titleContains: "<batchId>"`.
 
 ## Harness notes
 
@@ -53,13 +56,13 @@ Workers can't count on either harness's skill syntax, so the worker brief points
 Keep one **ledger** for the batch, either in your context or in the plan tool. It is the source of truth for every phase. Record:
 
 - **Batch:** a unique batch ID, the ticket source, the base branch and commit, the workspace mode, the worker selection line (provider · model · options · runtime mode), and the base branch's known failures.
-- **Per ticket:** source and ID, claim outcome (claimed / local claim / selected-but-unclaimed / skipped and why), acceptance criteria, dependencies, workspace path and branch, owned files, reserved sequence numbers, wave, execution state, worker `threadId` and run tag (keep earlier ones too), read position, the current round's `clientRequestId`, a selection override if the user gave this ticket its own target, validation evidence, and PR URL.
+- **Per ticket:** source and ID, claim outcome (claimed / local claim / selected-but-unclaimed / skipped and why), acceptance criteria, dependencies, workspace path and branch, owned files, reserved sequence numbers, wave, execution state, worker `threadId` and run tag (keep earlier ones too), read position, the current round number, a selection override if the user gave this ticket its own target, validation evidence, and PR URL.
 
-A worker is **settled** when its newest run is terminal and `t3_queue_list` shows nothing queued on its thread, as [Launched workers](../delegate-subagents/SKILL.md#launched-workers) describes. "Settled" means the worker has stopped. It does not mean the work was accepted.
+A worker is **settled** when its newest run is terminal and `t3_queue_list` shows nothing queued on its thread, as [Launched workers](../delegate-subagents/references/launched-workers.md) describes. "Settled" means the worker has stopped. It does not mean the work was accepted.
 
 ## 1. Preflight
 
-1. **Orchestration.** Invoke `delegate-subagents` as the harness table shows. If your catalog doesn't have it, read this repo's copy at [`../delegate-subagents/SKILL.md`](../delegate-subagents/SKILL.md). Use its phase 2 for the worker selection and its Launched workers section for every worker; the brief in phase 4 here replaces its phase 1. If it is unavailable, stop and report it. In Claude Code, load the T3 schemas you'll need in one ToolSearch call: `select:mcp__t3-code__orchestrator_capabilities,mcp__t3-code__t3_thread_launch,mcp__t3-code__t3_thread_list,mcp__t3-code__t3_thread_wait,mcp__t3-code__t3_thread_read,mcp__t3-code__t3_thread_send,mcp__t3-code__t3_thread_interrupt,mcp__t3-code__t3_pending_request_list,mcp__t3-code__t3_pending_request_respond,mcp__t3-code__t3_queue_list,mcp__t3-code__t3_workflow_stop,mcp__t3-code__t3_thread_search,mcp__t3-code__link_pull_request,mcp__t3-code__list_thread_pull_requests`.
+1. **Orchestration.** Invoke `delegate-subagents` as the harness table shows. If your catalog doesn't have it, read this repo's copy at [`../delegate-subagents/SKILL.md`](../delegate-subagents/SKILL.md). Use its phase 2 for the worker selection and its Launched workers reference for every worker; the brief in phase 4 here replaces its phase 1. If it is unavailable, stop and report it. In Claude Code, load the T3 schemas you'll need in one ToolSearch call: `select:mcp__t3-code__orchestrator_capabilities,mcp__t3-code__t3_thread_launch,mcp__t3-code__t3_thread_list,mcp__t3-code__t3_thread_wait,mcp__t3-code__t3_thread_read,mcp__t3-code__t3_thread_interrupt,mcp__t3-code__t3_pending_request_list,mcp__t3-code__t3_pending_request_read,mcp__t3-code__t3_pending_request_respond,mcp__t3-code__t3_queue_list,mcp__t3-code__t3_queue_cancel,mcp__t3-code__t3_workflow_stop,mcp__t3-code__t3_thread_search,mcp__t3-code__link_pull_request,mcp__t3-code__list_thread_pull_requests,mcp__t3-code__watch_pull_request,mcp__t3-code__unwatch_pull_request`.
 2. **Ticket source.** Get it from the user's request or the repository instructions. Read the tickets, their acceptance criteria and dependencies, and any project guidance that applies, including `AGENTS.md` or `CLAUDE.md` and any worktree setup script it names. If you can't find the source, ask the user where it is before you claim anything.
 3. **Count.** Use the ticket IDs and count the user asked for. An explicit list sets the count when the user gives none. For a backlog with no count, ask how many to claim. The count must be a positive integer. If the list and the count conflict, ask the user to resolve it.
 4. **Implement skill.** Load `implement` as the harness table shows. If your catalog doesn't have it, use this repo's copy at [`../../engineering/implement/SKILL.md`](../../engineering/implement/SKILL.md). Record its absolute path for the worker briefs. If it is missing, stop and report it.
@@ -120,19 +123,18 @@ Done when: every claimed ticket has a workspace, owned files, any reserved numbe
 
 ## 4. Dispatch
 
-Launch each ticket in the current wave with `t3_thread_launch`, following [Launched workers](../delegate-subagents/SKILL.md#launched-workers) in `delegate-subagents`, even when the worker runs on your own provider. Make the calls together when the harness supports parallel tool calls. Each call carries:
+Launch each ticket in the current wave with `t3_thread_launch`, then send it the brief below, following [Launched workers](../delegate-subagents/references/launched-workers.md) in `delegate-subagents`, even when the worker runs on your own provider. Make the calls together when the harness supports parallel tool calls. Each call carries:
 
 ```json
 {
   "title": "<ticket ID>: <ticket title> [<batchId>-<ticketId>-a<attempt>]",
-  "message": "<the brief below, every field filled in>",
-  "modelSelection": {"instanceId": "<from the selection>", "model": "<from the selection>", "options": {"effort": "<from the selection>"}},
+  "modelSelection": {"instanceId": "<from the selection>", "model": "<from the selection>", "options": {"<option id>": "<value>"}},
   "runtimeMode": "<from the selection>",
   "workspaceStrategy": {"type": "existing_worktree", "worktreePath": "<the ticket's workspace>", "branch": "<its branch>"}
 }
 ```
 
-With a shared checkout, use the parent's strategy from [Workspaces](#workspaces). Use the ticket's override in place of the batch selection when it has one. Write each returned `threadId` and run tag to the ledger immediately. If a launch errors or its response is lost, look for its run tag with `t3_thread_list` before you launch again.
+With a shared checkout, use the parent's strategy from [Workspaces](#workspaces). Use the ticket's override in place of the batch selection when it has one. Write each returned `threadId` and run tag to the ledger immediately. If a launch errors or its response is lost, look for its run tag with `t3_thread_list` before you launch again. Then start one background send per worker, carrying its brief with every field filled in.
 
 Workers see only the brief you send. Fill it in with facts you have already resolved:
 
@@ -167,23 +169,23 @@ their results, remaining failures or blockers, and any shared changes the
 parent needs to make.
 ```
 
-Done when: every ticket in the current wave has a `threadId` in the ledger, and you have reported the selection line and the ticket → thread table.
+Done when: every ticket in the current wave has a `threadId` in the ledger and a running send, and you have reported the selection line and the ticket → thread table.
 
 ## 5. Accept
 
-**Waiting.** When only worker work remains, wait on the workers with `t3_thread_wait`, one at a time, without ending the turn (hard rule 2). Handle timeouts, waiting workers, and server restarts as Launched workers describes. Read each result with `t3_thread_read` and assess it with phase 4 of `delegate-subagents`. A returned worker is one checkpoint. It doesn't mean the batch is done.
+**Waking.** Each send exit wakes you for one worker. Handle its exit code as Launched workers describes, read the result with `t3_thread_read`, and assess it with phase 4 of `delegate-subagents`. A returned worker is one checkpoint. It doesn't mean the batch is done.
 
 **Accepting a ticket.** First confirm the worker is settled. A finished worker turn doesn't prove the ticket is implemented. Read the actual diff in the ticket's workspace and check every acceptance criterion against it and the validation evidence. Check that it used its reserved numbers. Then record the ticket as accepted or needing correction.
 
 **Advancing waves.** Start the next wave only after every ticket it depends on is settled and accepted. At that point, release the earlier tickets' file ownership and fill in the new briefs' Dependencies field with the interfaces and findings those tickets actually produced. Each ticket has at most one active worker at a time.
 
-**Correcting or retrying.** First inspect the worker's partial changes and bring the ledger up to date. Then send another round to the ticket's worker thread with `t3_thread_send`, as Launched workers describes, with `clientRequestId` `<batchId>-<ticketId>-a2`, …, adding the current artifacts and the criteria still unmet. Record the round against the same ticket.
+**Correcting or retrying.** First inspect the worker's partial changes and bring the ledger up to date. Then send round 2, 3, … to the ticket's worker thread, as Launched workers' Another round describes, adding the current artifacts and the criteria still unmet. Record the round against the same ticket.
 
 **Failed workers.** A worker can fail for reasons outside its work, such as a rate limit. Before you retry, check whether it left processes running in its workspace, such as a test run. If it did, wait for them with the background waiting tool, then inspect the workspace. If the launch itself failed, look for its run tag with `t3_thread_list` before you launch again. When the worker ran and then failed, send the next round to the same thread.
 
 **Cancelling.** Stop a worker with `t3_thread_interrupt`, and any Claude workflow it runs with `t3_workflow_stop`, as Launched workers describes, when the user stops it, or when a worker that is still running has to be replaced. Before you replace the worker or release its files, confirm it has stopped and inspect its partial changes. Keep the evidence. When a ticket fails the same way twice, mark it blocked and report it instead of retrying again.
 
-Done when: every claimed ticket is settled and recorded as accepted, blocked, or cancelled. If this turn accepted the last ticket, continue to phase 6 now (hard rule 4).
+Done when: every claimed ticket is settled and recorded as accepted, blocked, or cancelled. Until then, end each turn with the workers still running. If this turn accepted the last ticket, continue to phase 6 now (hard rule 4).
 
 ## 6. Deliver
 
@@ -202,12 +204,13 @@ Work through this checklist in order, in the same turn. Tick each step in the le
    The title and body it drafts are what you publish. Hard rule 3 forbids anything else. Mark the review guide as requested only when the user or the repository guidance asks for one.
 5. **Link.** If PR-linking tools are available, call `link_pull_request` with the PR's URL for every PR you created or updated, then confirm the full set with `list_thread_pull_requests` and link any that are missing. Also link each PR to its ticket's worker thread by passing that `threadId`, so the worker's thread shows the PR and settles when it merges.
 6. **Tracker.** Close or update tickets only when the source's rules and the user's authorization allow it. A worker finishing is not enough to close a ticket. A closing reference such as `Closes #N` acts only when the PR merges into the default branch on hosts like GitHub and GitLab, so say so when the base is another branch. For other hosts, follow `docs/agents/issue-tracker.md`.
+7. **Watch.** Only when the user asks you to watch the PRs: call `watch_pull_request` for each, send the final report, and end the turn. T3 wakes this thread on reviews, comments, failed checks, and base conflicts, which start phase 7. Call `unwatch_pull_request` for each PR when you hand the batch back.
 
-Done when: every PR shows the body `pr` drafted, every PR is linked, and the final report below is sent.
+Done when: every PR shows the body `pr` drafted, every PR is linked and, when the user asked, watched, and the final report below is sent.
 
 **Handoff before delivery.** If the user wants to stop before commits or PRs, mark validated tickets in the ledger as awaiting delivery and keep their artifacts and validation evidence. Record blocked and cancelled claims explicitly. Release local file ownership only for settled workers. Release external claims according to the source's convention and the user's existing authorization.
 
-**Final report.** Give the worker selection line. For each ticket, give its state (completed, failed, blocked, cancelled, or still running), its workspace and branch, its validation evidence, its PR link, and any unresolved blockers. Report checks you couldn't run, and failures that existed before the batch, as they are. When the PRs touch shared sequences or depend on each other, give the merge order. Include any claim shortfall and any local claims. For unfinished work, include the ticket → thread mapping, linking each thread as `[title](t3-thread://v1/<threadId>)`.
+**Final report.** Give the worker selection line. For each ticket, give its state (completed, failed, blocked, cancelled, or still running), its workspace and branch, its validation evidence, its PR link, and any unresolved blockers. Report checks you couldn't run, and failures that existed before the batch, as they are. When the PRs touch shared sequences or depend on each other, give the merge order. Include any claim shortfall and any local claims. End with the ledger table: ticket, worker thread (linked as `[title](t3-thread://v1/<threadId>)`), run tag, branch, PR, and last round. Phase 7 starts from it after this thread is compacted.
 
 ## 7. Revise
 
@@ -215,8 +218,8 @@ This phase runs when changes come back for PRs the batch delivered: findings fro
 
 **Review findings.**
 
-1. Fix only what the lead judgment marked as fix-now. Give the user the list before you dispatch, along with anything you are leaving out.
-2. Route each PR's findings to its ticket. Unless the user names another target, send them to the ticket's worker thread with `t3_thread_send`, `mode: "queue"`, and `clientRequestId` `<batchId>-<ticketId>-a<next attempt>`. That is what "send the findings back to the previous subagents" means. It does not mean the reviewers or the interrogation lead threads. If the ledger lost a worker's `threadId`, find the thread with `t3_thread_search` and the PR number. For another target, launch a new worker on the same worktree with a new run tag.
+1. Fix only what the lead judgment marked as fix-now, or, after a PR watch wake, the comments and failed checks the user accepts. A wake is news, not a verdict. Give the user the list before you dispatch, along with anything you are leaving out.
+2. Route each PR's findings to its ticket. Unless the user names another target, send them to the ticket's worker thread as its next round, as Launched workers' Another round describes. That is what "send the findings back to the previous subagents" means. It does not mean the reviewers or the interrogation lead threads. If the ledger lost a worker's `threadId`, find the thread with `t3_thread_search` and the PR number. For another target, launch a new worker on the same worktree with a new run tag.
 3. Write each correction message like this, then repeat the original brief's Validation, Scope, and Return fields:
    ```text
    This is round <n> (correction) for ticket <ID>. Round 1 is committed at
@@ -225,7 +228,7 @@ This phase runs when changes come back for PRs the batch delivered: findings fro
    - <finding: location, problem, the fix the lead judgment expects, the test that proves it>
    Do NOT change: <findings dismissed or deferred, and why>.
    ```
-4. Report the revise table (PR, ticket, worker thread, round, fix), then wait on each round and accept it as in phase 5.
+4. Report the revise table (PR, ticket, worker thread, round, fix) and end the turn. Each round's send exit brings you back to accept it as in phase 5.
 
 **Base-branch updates.** When a PR conflicts with its base, update the branch in its workspace with the repository's convention. Look at the branch history to tell whether it merges the base or rebases onto it. Resolve the conflicts, apply any new migrations to the workspace's database, and validate as in phase 6.
 

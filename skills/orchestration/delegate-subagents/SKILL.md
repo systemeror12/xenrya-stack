@@ -16,8 +16,8 @@ You own integration and the final answer.
 
 Two rules hold in every phase:
 
-- **Children come from `delegate_task`, except launched workers.** Don't create a child with `t3_thread_launch` or `create_threads`. Those make top-level threads that never notify this one. Continue a child only as phase 4's [Another round](#4-assess-the-result) describes. The one exception is a **launched worker**: a worker that needs its own workspace binding in T3, such as a worktree, or one that a calling skill (`swarm-tickets`, `interrogation`) tells you to launch. A `delegate_task` child inherits this thread's checkout, so T3 would label it with the wrong branch. Follow [Launched workers](#launched-workers) for those.
-- **Wait by ending your turn.** A child's completion wakes this thread with a notification. Don't run `sleep`, don't poll `task_status` in a loop, and don't call `t3_thread_wait` on a child's thread. Launched workers are the exception: nothing wakes you for them, so you wait on them with `t3_thread_wait` as [Launched workers](#launched-workers) describes.
+- **Children come from `delegate_task`, except launched workers.** Don't create a child with `t3_thread_launch` or `create_threads`. Those make top-level threads that never notify this one. Continue a child only as phase 4's [Another round](#4-assess-the-result) describes. The one exception is a **launched worker**: a worker that needs a workspace `delegate_task` can't give it, such as a worktree on a base and branch you choose, or one that a calling skill (`swarm-tickets`, `interrogation`) tells you to launch. Follow [`references/launched-workers.md`](references/launched-workers.md) for those.
+- **Wait by ending your turn.** A child's completion wakes this thread with a notification, and a launched worker's round wakes it through the background CLI send that delivered it, as [Launched workers](references/launched-workers.md) describes. Don't run `sleep`, don't poll `task_status` in a loop, and don't call `t3_thread_wait` on a child's thread.
 
 The workflow has four phases: **define → resolve target → dispatch → assess**. Other skills, such as `swarm-tickets`, write their own briefs and then follow phases 2–4 here for their workers.
 
@@ -28,9 +28,10 @@ This skill runs on both Claude Code and Codex. The instructions use bare T3 tool
 | | Claude Code | Codex |
 | --- | --- | --- |
 | T3 tool names | `mcp__t3-code__<tool>` | `mcp__t3_code__<tool>`; in code mode, `tools.mcp__t3_code__<tool>(args)` |
-| T3 tools missing | Listed as deferred: load the schemas with ToolSearch, e.g. `select:mcp__t3-code__orchestrator_capabilities,mcp__t3-code__delegate_task,mcp__t3-code__task_status,mcp__t3-code__task_cancel` | Make one direct call to `orchestrator_capabilities` before you conclude T3 is unavailable |
+| T3 tools missing | Listed as deferred: load the schemas with ToolSearch, e.g. `select:mcp__t3-code__orchestrator_capabilities,mcp__t3-code__delegate_task,mcp__t3-code__task_status,mcp__t3-code__task_cancel,mcp__t3-code__t3_pending_request_read,mcp__t3-code__t3_pending_request_respond,mcp__t3-code__t3_queue_list,mcp__t3-code__t3_queue_cancel,mcp__t3-code__t3_thread_send` | Make one direct call to `orchestrator_capabilities` before you conclude T3 is unavailable |
 | Native subagents | Agent tool | Codex native subagents |
-| Wait on a shell process | Bash with `run_in_background: true` running an `until` loop, or the Monitor tool | A background terminal session |
+| Wait on a shell process | Bash with `run_in_background: true` (up to `timeout: 7200000`) running the command or an `until` loop, or the Monitor tool | A background terminal session |
+| T3 CLI | `t3` on PATH, or `~/.t3/bin/t3` | Same |
 
 ## 1. Define the assignment
 
@@ -92,17 +93,13 @@ Call `delegate_task` with:
 - `title`: a short label for the child thread
 - `target`, `runtimeMode`, `interactionMode`: from the selection in phase 2
 - `role`: the closest of `implementation`, `research`, `review`, `design`, `test`, `general`
-- `mode="async"`: use `wait` only when this turn can't continue without the result. On `wait`, `timeoutMs` only limits how long the parent waits; the child keeps running. If the call returns `waitTimedOut`, keep the `taskId` and follow up with `task_status`.
+- `mode="async"`: use `wait` only when this turn can't continue without the result. A wait can return while the child still runs, with `waitTimedOut`, `hasPendingQuestion`, or `pendingApproval` set. Keep the `taskId`, and handle a question or approval as [Blocked children](#waiting) describes.
 - `clientRequestId`: distinct for each assignment or review round, and reused unchanged when retrying that same dispatch. If a dispatch response is lost, retry with the same key so you don't create a second child.
 
 ### Workspace
 
-`delegate_task` has no workspace parameter. The child works in whatever directory its brief names, and its shell may start in the parent's checkout.
-
-- **Shared checkout** (the default). Give the parent's checkout path, and give concurrent writers disjoint file ownership.
-- **Own worktree.** When a worker needs its own branch or isolated state, create the worktree yourself (`git worktree add -b <branch> <path> <base>`) and run the repository's worktree setup script in it, one worktree at a time. Then launch the worker bound to it, as [Launched workers](#launched-workers) describes, instead of calling `delegate_task`.
-
-A launched worker is still your worker: you own its brief, waiting, acceptance, and cancellation. Any other top-level conversation needs its own explicit request from the user.
+- **Shared checkout** (the default). The child works in this thread's checkout. Give concurrent writers disjoint file ownership.
+- **Own worktree.** `isolation: "worktree"` gives the child a checkout of this thread's last commit, on a branch T3 names, after the T3 project's setup script runs. Commit what the child needs first: uncommitted edits stay behind. When the worker needs a base or branch you choose, or the setup script `AGENTS.md` names, launch it instead, as [Launched workers](references/launched-workers.md) describes.
 
 Record the returned `taskId` together with the selection line. For native subagents, record their native agent identifier and use the native lifecycle tools.
 
@@ -115,69 +112,30 @@ Keep doing independent parent work while the child runs. Then wait in one of the
 | A T3 child | End the turn. Tell the user which `taskId`s are running. T3 wakes you with a notification when each one finishes. |
 | A child's result needed later in this same turn | One `task_status` call, or dispatch with `mode="wait"` |
 | A shell process, such as a validation run or a failed child's leftover test run | The harness's background waiting tool from the [harness table](#harness-notes). It notifies you when the process exits. |
-| A launched worker | `t3_thread_wait` without ending the turn, as [Launched workers](#launched-workers) describes |
+| A launched worker | End the turn. The background CLI send that delivered its round wakes you, as [Launched workers](references/launched-workers.md) describes. |
 
 If a wait times out, the child is still running: follow the existing task rather than dispatching a copy.
+
+**Blocked children.** A child or worker can stop to wait for an answer. For `hasPendingQuestion`, read the question with `t3_pending_request_read` on its thread, then answer it from the brief with `t3_pending_request_respond`, or ask the user. No T3 tool can grant a `pendingApproval`: tell the user and link the thread as `[title](t3-thread://v1/<threadId>)`. A message typed in that thread's composer declines the request and redirects the agent. Either way it keeps running, and a child's completion still wakes you.
 
 Done when: every assignment has a `taskId`, or a launched worker's `threadId`, recorded with its selection.
 
 ## 4. Assess the result
 
-**Reading status.** When a completion notification arrives, call `task_status` once for that `taskId`. It reports a `workState` of active work, `waiting_for_children`, or `result_available`. Read the published `summary`. Reading a terminal result acknowledges its automatic delivery. A finished child turn that still has live nested work, or `hasPendingChildRuns: true`, is not a finished delegated task.
+**Reading status.** When a completion notification arrives, call `task_status` once for that `taskId` and read its `summary`. Accept only `workState: result_available` with `hasPendingChildRuns: false`. `waiting_for_children` means the child's turn ended but work it started still runs. Reading a terminal result acknowledges its automatic delivery.
 
-**Failed children.** A child can fail for reasons outside its work, such as a rate limit, and it may leave processes running in its workspace. Check for them before you act. If there are any, wait on them with the background waiting tool, then inspect what the child changed. Retry the same `clientRequestId` only when the dispatch itself was lost. When the child ran and then failed, start a new round.
+**Failed children.** A child can fail for reasons outside its work, such as a rate limit or a frozen host; its `summary` names the cause. It may leave processes running in its workspace. Check for them before you act. If there are any, wait on them with the background waiting tool, then inspect what the child changed. Retry the same `clientRequestId` only when the dispatch itself was lost. When the child ran and then failed, start a new round.
 
 **Checking the work.** Compare the deliverables and evidence against the brief's "Done when" criteria. Inspect the artifacts the child produced and run any remaining integration checks. Resolve missing evidence or open objections before you present the work as complete.
 
 **Another round.** For another review round, or any round that should start fresh, call `delegate_task` again. Send the original brief, the prior findings, the responses, and any unresolved objections, with a new `clientRequestId` for the round. Track the new `taskId`. A review round never goes to the old `childThreadId`.
 
-A correction that needs the same child's conversation can go to its `childThreadId` instead, once the original task is terminal. Call `t3_thread_send` with `mode: "queue"` and a new `clientRequestId` for the round, reused unchanged on retries. T3 creates a fresh task in that child thread and returns its `taskId`; its completion notifies you like any child, and the original result stays unchanged. Write the message so the round stands on its own: the findings, what not to change, and the brief's Deliverables and Done-when fields. If the send returns no `taskId`, start the round with `delegate_task` instead.
+A correction that needs the same child's conversation can go to its `childThreadId` instead, once the original task is terminal. First cancel any stale turn that `t3_queue_list` shows on that thread with `t3_queue_cancel`: a send resumes a held queue, so the old turn would run first. Then call `t3_thread_send` with `mode: "queue"` and a new `clientRequestId` for the round, reused unchanged on retries. T3 creates a fresh task in that child thread and returns its `taskId`; its completion notifies you like any child, and the original result stays unchanged. Write the message so the round stands on its own: the findings, what not to change, and the brief's Deliverables and Done-when fields. If the send returns no `taskId`, start the round with `delegate_task` instead.
 
 **Cancelling.** Use `task_cancel` when the user asks you to stop an owned task, or when the authorized workflow requires it. Cancelling also stops the task's descendants and any later runs on its backing thread. Results that were already published stay available. A task whose child had only background work left can report `completed` after `task_cancel`; record it as cancelled and don't accept its summary.
 
-For launched workers, read, correct, and cancel as [Launched workers](#launched-workers) describes; the rest of this phase still applies.
+For launched workers, read, correct, and cancel as [Launched workers](references/launched-workers.md) describes; the rest of this phase still applies.
 
 Done when: every assignment is accepted, cancelled, or still running, with evidence for the accepted ones.
 
 Finish with the outcome, the delegate's selection line, the validation evidence, and any unresolved work. If a task is still running, give its `taskId` and state, and describe it as running.
-
-## Launched workers
-
-A launched worker is a top-level T3 thread that you start with `t3_thread_launch` and follow as your own worker. T3 binds it to its workspace, so its thread shows the real branch. Use one only when the worker needs its own workspace binding or a calling skill says to launch it. Everything else stays on `delegate_task`.
-
-In Claude Code, load the schemas in one ToolSearch call: `select:mcp__t3-code__t3_thread_launch,mcp__t3-code__t3_thread_list,mcp__t3-code__t3_thread_wait,mcp__t3-code__t3_thread_read,mcp__t3-code__t3_thread_send,mcp__t3-code__t3_thread_interrupt,mcp__t3-code__t3_pending_request_list,mcp__t3-code__t3_pending_request_respond,mcp__t3-code__t3_queue_list,mcp__t3-code__t3_workflow_stop`.
-
-**Before launching.**
-
-- **Modes.** A launched thread can't run with broader runtime or interaction modes than this thread. `orchestrator_capabilities` reports this thread's `runtimeMode` and `interactionMode`. If the selection asks for more, such as full-access workers from an auto-accept-edits parent, report it and stop. Also check the runtime mode against the provider's `runtimeModes`, as phase 2 describes: `t3_thread_launch` doesn't.
-- **Workspace.** The checkout must already exist and its setup must have passed. T3's own preparation runs only a setup script saved in the T3 project, not the one the repository's `AGENTS.md` names, so create worktrees and run setup yourself, one at a time. Bind a worktree with `existing_worktree`. Use `{"type": "root"}` only for the project's main checkout.
-
-**Launch.**
-
-```json
-{
-  "title": "<label> [<run tag>]",
-  "message": "<the brief>",
-  "modelSelection": {"instanceId": "<providerInstanceId>", "model": "<model id>", "options": {"effort": "<value>"}},
-  "runtimeMode": "<runtime mode>",
-  "workspaceStrategy": {"type": "existing_worktree", "worktreePath": "<absolute path>", "branch": "<branch>"}
-}
-```
-
-`modelSelection` carries the phase 2 selection, with `instanceId` in place of `providerInstanceId`. Leave out the parts the selection inherits. The run tag, such as `swarm-20261010-a-467-a1`, must be unique, because `t3_thread_launch` has no retry key. Record the returned `threadId` with the selection and a read position of 0. Tell the brief to finish in one turn and to report a blocker in its result rather than ask a question, because a worker that ends its turn early looks finished to you.
-
-**Lost response or error.** Call `t3_thread_list` with `titleContains: "<run tag>"` before you launch again. If the thread exists, record it and follow it. Launch again only when it doesn't exist.
-
-**Waiting.** Nothing wakes you when a launched worker finishes, so don't end your turn while one is running. Call `t3_thread_wait` on one running worker at a time, with `timeoutMs: 600000`. When it returns, handle that worker, then wait on the next running one. A worker that finished in the meantime returns at once.
-
-- `timedOut: true` means the worker is still running. Check its status with `t3_thread_list`. If it is `waiting`, call `t3_pending_request_list` and answer a listed question from the brief with `t3_pending_request_respond`. An empty list means the worker is waiting on a permission approval these tools can't grant: tell the user, link the thread as `[title](t3-thread://v1/<threadId>)`, and keep waiting on the other workers. Otherwise call `t3_thread_wait` again.
-- When it returns `interrupted`, `failed`, or `cancelled`, or returns at once without a terminal status, check the thread with `t3_thread_list` before you act. After a server restart T3 may continue a thread on its own, up to three times in a row. If the thread is `preparing`, or a newer run is `queued`, `starting`, or `running`, wait again without `runId`.
-- If your turn ends anyway, because the user interrupted, the harness ended it, or a server restart cut it (T3 then sends this thread "Continue where you left off."), start the next turn with `t3_thread_list` and `t3_thread_read` for every recorded `threadId`, update your records, and keep waiting.
-
-**Reading the result.** Call `t3_thread_read` with `view: "messages"` and `afterPosition` set to the recorded read position. The worker's report is the last assistant message. If it is truncated, continue with its `itemId` and `textOffset` until `nextTextOffset` is null. Record `nextPosition` as the new read position. A launched worker is **settled** when its newest run is terminal (completed, failed, interrupted, or cancelled) and `t3_queue_list` shows nothing queued on its thread. Then assess the result as in phase 4.
-
-**Another round.** Send the correction to the same thread with `t3_thread_send`, `mode: "queue"`, and a new `clientRequestId` for the round, reused unchanged on retries. The worker keeps its earlier context, but write the message so the round stands on its own: the findings, what not to change, and the brief's Validation, Scope, and Return fields. A round queued on a provider the project turned off is held, not run, so confirm with `t3_thread_list` that the thread left `queued` or `idle` before you wait on it. Then wait as above. Queue one round at a time. For a different target, launch a new thread on the same workspace with a new run tag.
-
-**Failed workers.** Check for leftover processes in the worker's workspace and wait them out before you act, as in phase 4. When the worker ran and then failed, send the next round to the same thread.
-
-**Cancelling.** Call `t3_thread_interrupt` with the `threadId` and a `clientRequestId`. It stops only the running turn. It doesn't hold queued turns or stop tasks the worker delegated, which is why you queue one round at a time and briefs forbid further delegation. Then read the thread with `t3_thread_read` and `view: "activity"`, and stop each Claude workflow still running with `t3_workflow_stop` and its coordinator `subagentId`. Confirm with `t3_thread_list` that nothing is running before you release the worker's files.

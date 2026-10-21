@@ -5,8 +5,8 @@ The brief branch of [`writing-for-agents`](../SKILL.md). A **brief** is text you
 | Tool | Field | Its reader |
 | --- | --- | --- |
 | `delegate_task` | `task` | A child of this thread, holding only this text |
-| `t3_thread_launch` | `message` | A launched worker, bound to its workspace |
-| `t3_thread_send` | `message` | A thread receiving another round, with its earlier context |
+| `t3 thread send` (CLI) | stdin | A launched worker's round, the first brief included |
+| `t3_thread_send` | `message` | A child thread receiving another round, with its earlier context |
 | `create_threads` | `prompt` | New top-level threads sharing this checkout |
 | `schedule_task` | `prompt` | A future run that fires with nobody watching |
 | `t3_queue_edit` | `text` | A queued message, rewritten before it runs |
@@ -40,12 +40,13 @@ The parent reads the last assistant message and accepts the work by comparing it
 
 ## Another round
 
-A round sent with `t3_thread_send`, or a fresh `delegate_task` for another review round, stands alone even when the thread remembers round 1. Open with the round and what came before ("This is round 2 (correction) for ticket #464. Round 1 is committed at …"). List what to fix, then what to leave unchanged, then repeat the original Validation, Scope, and Return.
+A round sent with `t3_thread_send`, or a fresh `delegate_task` for another review round, stands alone: the thread may have been compacted since round 1, and a fresh child remembers nothing. Open with the round and what came before ("This is round 2 (correction) for ticket #464. Round 1 is committed at …"). List what to fix, then what to leave unchanged, then repeat the original Validation, Scope, and Return.
 
 ## Scheduled prompts
 
 A `schedule_task` prompt is a brief for every future run. A run bound to the scheduling thread (the default) lands with that thread's context. A run in a fresh thread starts cold, so write its prompt as a full brief.
 
 - **Name the work and the quiet result.** Say which skill or steps a run follows, and what it reports when it finds nothing to do.
-- **Tell new work from work in flight.** Triggers repeat, and a run can fire while earlier work still runs. Say how a run recognises work that it or an earlier run already started.
+- **Filter at the trigger.** Give a webhook `filters` for the events a run handles, and `dedupe` for repeats: a `replayKey` such as `{{headers.x-github-delivery}}` drops redeliveries, and a `coalesceKey` such as `{{body.pull_request.number}}` folds a burst into one run with the latest payload. A request the prompt would only ignore belongs in a filter, not a prompt line.
+- **Tell new work from work in flight.** Dedupe covers one window, and a run can still fire while earlier work runs. Say how a run recognises work that it or an earlier run already started.
 - **Webhook data is data.** The request reaches the run only through placeholders such as `{{body.action}}`. Each value arrives framed as untrusted, and skill, file, or command mentions inside it do nothing. Keep every instruction in the prompt, and use placeholders only for values the steps read.
