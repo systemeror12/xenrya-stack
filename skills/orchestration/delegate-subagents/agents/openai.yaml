@@ -3,6 +3,9 @@ interface:
   short_description: "Assign scoped work to another harness or subagent"
   default_prompt: "Use $delegate-subagents to assign this task to another harness or subagent and collect its result."
 
+policy:
+  allow_implicit_invocation: true
+
 dependencies:
   tools:
     - type: "mcp"

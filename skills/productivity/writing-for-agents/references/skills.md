@@ -8,7 +8,7 @@ A skill is a directory, `skills/<group>/<name>/`.
 
 - **Groups.** `engineering` holds the spec-to-PR work, `orchestration` holds T3 parents and their workers, and `productivity` holds the rest.
 - **Contents.** `SKILL.md` and `agents/openai.yaml`; `references/` for disclosed reference, such as templates, variants, and the worked example; `scripts/` for code the skill runs, resolved relative to `SKILL.md`.
-- **Install.** Each skill is a symlink from `~/.claude/skills/<name>` and from `~/.agents/skills/<name>` to its directory in the main checkout. Add both links for a new skill. An edit made in another worktree isn't installed until it reaches the main checkout, so trial it by absolute path.
+- **Install.** Each skill is a symlink to its directory in the main checkout, from `skills/<name>` in every Claude Code config directory (`~/.claude`, `~/.claude-work`) and from `~/.agents/skills/<name>`. Add every link for a new skill, and remove them all for a deleted one. An edit made in another worktree isn't installed until it reaches the main checkout, so trial it by absolute path.
 
 ## Frontmatter
 
@@ -38,7 +38,7 @@ No skill can fire a user-invoked skill, so another skill reaches one by its file
 ## Pointers between skills
 
 - **Name the skill, then give a fallback path.** "Invoke `delegate-subagents`. If your catalog doesn't have it, read this repo's copy at `../delegate-subagents/SKILL.md`." The name works through either harness's catalog; the path works when the catalog lacks the skill.
-- **Link the section when only part applies:** `../delegate-subagents/SKILL.md#launched-workers`. Other skills link headings by anchor, so search the repo for a heading's anchor before you rename the heading.
+- **Link the section when only part applies:** `../delegate-subagents/SKILL.md#2-resolve-the-target`. Other skills link headings by anchor, so search the repo for a heading's anchor before you rename the heading.
 - **Own your workflow; defer the mechanics.** A skill owns its domain and points at the skill that owns each mechanic it uses. Say so near the top, as `swarm-tickets` does: "All T3 Code orchestration … lives in `delegate-subagents`".
 - **A brief uses an absolute path.** A worker can't count on either harness's skill syntax: "Read the skill at <absolute path to implement/SKILL.md> and follow it."
 

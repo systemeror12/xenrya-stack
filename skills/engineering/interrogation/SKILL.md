@@ -49,7 +49,7 @@ Read and follow [delegate-subagents](../../orchestration/delegate-subagents/SKIL
 Reviewers are `delegate_task` children, so they inherit the checkout of the thread that dispatches them, and T3 labels them with that thread's branch. Run each scope's review from a thread bound to that scope's checkout:
 
 - **Scope in this thread's checkout** (the current branch, or local files): you are the lead. Do the rest of Step 3 and Steps 4–5 here.
-- **Scope in another checkout** (a PR in its own worktree, such as the PRs from `swarm-tickets`): you are the parent. Resolve the reviewer roster below, then launch one **lead thread** per PR, bound to that PR's checkout with `existing_worktree`, as [Launched workers](../../orchestration/delegate-subagents/SKILL.md#launched-workers) describes. Each lead dispatches that PR's reviewers and judges their findings. Launch a fresh lead rather than reusing the thread that wrote the code, so the author doesn't judge its own review.
+- **Scope in another checkout** (a PR in its own worktree, such as the PRs from `swarm-tickets`): you are the parent. Resolve the reviewer roster below, then launch one **lead thread** per PR, bound to that PR's checkout with `existing_worktree`, as [Launched workers](../../orchestration/delegate-subagents/references/launched-workers.md) describes. Each lead dispatches that PR's reviewers and judges their findings. Launch a fresh lead rather than reusing the thread that wrote the code, so the author doesn't judge its own review.
 
 Title each lead `Interrogate PR #<N> (<ticket>) [interrogate-<date>-pr<N>-r1]`, and send it this brief:
 
@@ -65,14 +65,15 @@ Repository guidance and glossary: <paths>.
 
 Do Step 3 for this scope only, with one change: dispatch every reviewer in one
 message of parallel delegate_task calls with mode "wait" and timeoutMs 1800000,
-so the reviews finish inside this turn. Count a reviewer that returns
-waitTimedOut as incomplete coverage and give its taskId. Then do Steps 4 and 5
+so the reviews finish inside this turn. A wait that returns waitTimedOut,
+hasPendingQuestion, or pendingApproval leaves that reviewer running: count it
+as incomplete coverage and give its taskId and the reason. Then do Steps 4 and 5
 and return the verdict in the Output Format, starting with
 "## Verdict: PR #<N>". Don't edit the repository, apply fixes, commit, push,
 or touch PRs or databases.
 ```
 
-The leads wait on their reviewers with `mode: "wait"` because the parent's `t3_thread_wait` returns when the lead's turn ends. A lead that ended its turn to wait for notifications would look finished before its reviews were in.
+The leads wait on their reviewers with `mode: "wait"` because the parent's wait on a lead returns when the lead's turn ends. A lead that ended its turn to wait for notifications would look finished before its reviews were in.
 
 As the parent, wait on each lead and read its verdict, the last assistant message, as Launched workers describes. A lead that failed or returned no verdict is missing coverage for its PR. Then go to the Output Format with the leads' verdicts.
 

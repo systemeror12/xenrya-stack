@@ -66,7 +66,7 @@ A document holds **steps**, the actions the agent takes in order, and **referenc
 
 **Progressive disclosure** moves a piece down the ladder so the top stays legible. Branching is the test: inline what every branch needs, and disclose what only some branches reach. `pr` keeps its steps inline and sends release PRs to `references/release.md` and screenshots to `references/before-after.md`, because only some PRs reach them. Reference left inline when it belongs lower buries the steps, and whether the agent attends to a buried step becomes a coin flip.
 
-**Co-location** decides what sits beside a piece once it is placed. Keep a concept's definition, rules, and caveats under one heading: `delegate-subagents` keeps launching, waiting on, reading, correcting, and cancelling a launched worker in one section, and the skills that launch workers point at it.
+**Co-location** decides what sits beside a piece once it is placed. Keep a concept's definition, rules, and caveats under one heading: `delegate-subagents` keeps launching, waiting on, reading, correcting, and cancelling a launched worker in one file, `references/launched-workers.md`, and the skills that launch workers point at it.
 
 **Sprawl** is a document too long even when every line is live. Attention thins over the excess. Cure it with the ladder: disclose reference, and split by branch, sequence, or reader.
 
@@ -79,7 +79,7 @@ Every step ends on a `Done when` line, its **completion criterion**. Two propert
 
 The strongest criteria are checkable and exhaustive: "every selected ticket has a claim outcome in the ledger".
 
-**Turn boundaries.** In T3, how a turn ends is part of the path. Ending the turn is how a parent waits for a `delegate_task` child, and the wrong way to wait for a launched worker, because nothing wakes the parent for one. When a workflow spans turns, say where each turn ends and what starts the next, as `swarm-tickets`' Turn map does.
+**Turn boundaries.** In T3, how a turn ends is part of the path. Ending the turn is how a parent waits, but only when something will wake it: a `delegate_task` child's notification, or the background CLI send that delivered a launched worker's round. When a workflow spans turns, say where each turn ends and what starts the next, as `swarm-tickets`' Turn map does.
 
 ## When to split
 

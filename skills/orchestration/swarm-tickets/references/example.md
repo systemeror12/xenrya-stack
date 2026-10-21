@@ -2,7 +2,7 @@
 
 This batch ran in the `lingkod-hr` repository. The parent was Claude Opus 5.5 and the workers were Claude Opus 5.5 · Medium. It shows every phase, then one review and one correction round. The turn boundaries are marked, because they are where the workflow most often goes wrong.
 
-The batch originally ran its workers as `delegate_task` children. It is shown here with launched worker threads, which is how the skill runs now.
+The batch originally ran its workers as `delegate_task` children and waited in one long turn. It is shown here the way the skill runs now: launched worker threads, each round delivered by a background CLI send.
 
 ## Turn 1: the request
 
@@ -36,16 +36,23 @@ Each worktree got its own database (`hris_swarm_issue_<N>`) and ports. The lingk
 
 > **What went wrong:** no migration numbers were reserved, and all three workers took `0120`. At delivery the parent had to rename two migration directories and fix `_prisma_migrations` in two worktree databases. Reserving `0120`, `0121`, and `0122` in the briefs avoids that.
 
-**Dispatch.** Three `t3_thread_launch` calls in one message, each bound to its worktree:
+**Dispatch.** Three `t3_thread_launch` calls in one message, each bound to its worktree and started idle:
 
 ```json
 {
   "title": "#464: Set authTime at TOTP confirmation in forced enrollment [swarm-20261009-a-464-a1]",
   "modelSelection": {"instanceId": "claudeAgent", "model": "claude-opus-5-5", "options": {"effort": "medium"}},
   "runtimeMode": "full-access",
-  "workspaceStrategy": {"type": "existing_worktree", "worktreePath": "/home/xenrya/.t3/worktrees/lingkod-hr/swarm-issue-464", "branch": "t3code/implement-issue-464"},
-  "message": "Read the skill at /home/xenrya/.claude/skills/implement/SKILL.md and follow it for this ticket. ..."
+  "workspaceStrategy": {"type": "existing_worktree", "worktreePath": "/home/xenrya/.t3/worktrees/lingkod-hr/swarm-issue-464", "branch": "t3code/implement-issue-464"}
 }
+```
+
+Then one background send per worker, carrying its brief:
+
+```bash
+~/.t3/bin/t3 thread send <#464 threadId> - --wait --json <<'BRIEF'
+Read the skill at /home/xenrya/.claude/skills/implement/SKILL.md and follow it for this ticket. ...
+BRIEF
 ```
 
 The Workspace field of that brief:
@@ -60,15 +67,15 @@ API 28531). Node via `fnm exec --using .node-version` if `node` isn't on PATH.
 
 > **What went wrong:** batches `swarm-20261009-a` and `swarm-20261010-a` ran their workers as `delegate_task` children. Each brief named its worktree and the work landed there, but every child inherited the parent's checkout binding, so T3 labelled all of them with branch `dev`. A launched thread bound with `existing_worktree` shows its real branch.
 
-The parent recorded each `threadId` and run tag, then reported the selection line, the three worktrees, and the ticket → thread table. It did not end the turn.
+The parent recorded each `threadId` and run tag, reported the selection line, the three worktrees, and the ticket → thread table, and ended the turn.
 
-## Turn 1, continued: waiting and accepting
+## Turns 2–4: accepting
 
-The parent called `t3_thread_wait` on #464's thread with `timeoutMs: 600000`. It timed out once, so the parent checked the thread with `t3_thread_list` (still `running`) and waited again. When #464 returned, the parent read the worker's report with `t3_thread_read`, read the diff in that worktree, and checked each acceptance criterion. Then it waited on #465 and #466 the same way. #465 had already finished, so its wait returned at once. One example of acceptance: #465 added a migration because `security_events` has forced row-level security, and the parent compared it with the precedent in migration `0115`.
+#464's send exited 0 first and woke the parent. It read the worker's report with `t3_thread_read`, read the diff in that worktree, checked each acceptance criterion, and ended the turn with two workers still running. #465 and #466 woke it the same way. One example of acceptance: #465 added a migration because `security_events` has forced row-level security, and the parent compared it with the precedent in migration `0115`.
 
 > **What went wrong:** all three workers ran the full database suite at the same time. One run crashed on an unrelated file, and `fnm` raced on a shared symlink. The Validation field should leave the full and database suites to the parent.
 
-## Turn 1, continued: deliver
+## Turn 4, continued: deliver
 
 Accepting #466, the last ticket, started delivery in the same turn:
 
@@ -94,7 +101,7 @@ The parent froze each PR's diff (`git diff 0f68ea9...HEAD > /tmp/interrogation/p
 fix the issue by assigning the finds to its respective previous subagents
 ```
 
-"Previous subagents" means each ticket's worker thread. It does not mean the reviewers or the lead threads. The parent sent each round to the worker thread with `t3_thread_send` and `mode: "queue"`. Each message repeated the original Validation, Scope, and Return fields and added:
+"Previous subagents" means each ticket's worker thread. It does not mean the reviewers or the lead threads. The parent sent each round to the worker thread with a background CLI send. Each message repeated the original Validation, Scope, and Return fields and added:
 
 ```text
 This is round 2 (correction) for ticket #464. You implemented it in round 1;
@@ -106,7 +113,7 @@ fix. Fix only that.
 Do NOT change: <dismissed findings and why>
 ```
 
-The `clientRequestId`s were `swarm-20261009-a-<ticket>-a2`. All three round-2 workers hit a rate limit and failed, but their test runs kept going in the worktrees. The parent waited for those processes with a background Bash `until` loop rather than sending new rounds, then inspected the worktrees and finished the validation itself, one worktree at a time.
+All three round-2 sends exited 1: the workers hit a rate limit and failed, but their test runs kept going in the worktrees. The parent waited for those processes with a background Bash `until` loop rather than sending new rounds, then inspected the worktrees and finished the validation itself, one worktree at a time.
 
 > **What went wrong:** the parent pushed the fixes and then wrote the new PR bodies by hand with `gh pr edit`, judging `pr` too heavy for a small change. Hard rule 3 says every update goes through `pr`, whatever its size.
 
